@@ -21,7 +21,8 @@ Imports:
   GO.db, 
   AnnotationDbi, 
   Rcpp (>= 0.11.0), 
-  robust
+  robust,
+  glue
 Suggests: org.Hs.eg.db, 
   org.Mm.eg.db, 
   infotheo, 
