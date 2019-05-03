@@ -1,0 +1,255 @@
+---
+title: 'Tutorial for the WGCNA package for R:: Using simulated data to evaluate different
+  module detection methods and gene screening approaches'
+output:
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    toc: yes
+    number_sections: yes
+---
+# Simulation of expression and trait data
+
+## Setting up the R session
+Before starting, the user should choose a working directory, preferably a directory devoted exclusively for this tutorial. After starting an R session, change working directory, load the requisite packages and set standard options:
+
+```{r 0, message=FALSE, warning=FALSE}
+# If necessary, change the path below to the directory where the data files are stored.
+# "." means current directory.  On Windows use a forward slash / instead of the usual \.
+workingDir <- "."
+setwd(workingDir)
+# Load packages
+librarian::shelf(magrittr, tidyverse, data.table, glue, WGCNA, BiocParallel)
+library(WGCNA)
+# The following setting is important, do not omit.
+options(stringsAsFactors = FALSE)
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+## Simulation of expression and trait data
+In this section we illustrate simulation of expression data with a simple module structure.
+
+### Building the module structure
+We choose the basic parameters of the simulated data set: we will simulate 3000 genes in 50 samples. The genes will fall into five proper modules (labeled turquoise, blue, brown, green, and yellow) and a relatively large number of genes will be simulated outside of the proper modules (“grey” genes).
+
+```{r 1.1}
+# Here are input parameters of the simulation model
+# number of samples or microarrays in the training data
+no.obs <- 50
+# now we specify the true measures of eigengene significance
+# recall that ESturquoise=cor(y,MEturquoise)
+ESturquoise <- 0
+ESbrown <- -.6
+ESgreen <- .6
+ESyellow <- 0
+# Note that we donâ€™t specify the eigengene significance of the blue module
+# since it is highly correlated with the turquoise module.
+ESvector <- c(ESturquoise, ESbrown, ESgreen, ESyellow)
+# number of genes
+nGenes1 <- 3000
+# proportion of genes in the turquoise, blue, brown, green, and yellow module #respectively.
+simulateProportions1 <- c(0.2, 0.15, 0.08, 0.06, 0.04)
+# Note that the proportions donâ€™t add up to 1. The remaining genes will be colored grey,
+# ie the grey genes are non-module genes.
+# set the seed of the random number generator. As a homework exercise change this seed.
+set.seed(1)
+# Step 1: simulate a module eigengene network.
+# Training Data Set I
+MEgreen <- rnorm(no.obs)
+scaledy <- MEgreen * ESgreen + sqrt(1 - ESgreen^2) * rnorm(no.obs)
+y <- ifelse(scaledy > median(scaledy), 2, 1)
+MEturquoise <- ESturquoise * scaledy + sqrt(1 - ESturquoise^2) * rnorm(no.obs)
+# we simulate a strong dependence between MEblue and MEturquoise
+MEblue <- .6 * MEturquoise + sqrt(1 - .6^2) * rnorm(no.obs)
+MEbrown <- ESbrown * scaledy + sqrt(1 - ESbrown^2) * rnorm(no.obs)
+MEyellow <- ESyellow * scaledy + sqrt(1 - ESyellow^2) * rnorm(no.obs)
+ModuleEigengeneNetwork1 <- data.frame(y, MEturquoise, MEblue, MEbrown, MEgreen, MEyellow)
+```
+
+The variable `ModuleEigengeneNetwork1` contains the "seed" eigengenes and a simulated clinical trait `y`. The eigengene network can be simply inspected by:
+
+```{r}
+signif(cor(ModuleEigengeneNetwork1, use="p"),2)
+```
+
+
+### Simulating gene expressions around the module eigengenes
+The package contains a convenient function to simulate five modules which we call below:
+```{r 1.2}
+dat1 <- simulateDatExpr5Modules(
+  MEturquoise = ModuleEigengeneNetwork1$MEturquoise,
+  MEblue = ModuleEigengeneNetwork1$MEblue,
+  MEbrown = ModuleEigengeneNetwork1$MEbrown,
+  MEyellow = ModuleEigengeneNetwork1$MEyellow,
+  MEgreen = ModuleEigengeneNetwork1$MEgreen,
+  nGenes = nGenes1,
+  simulateProportions = simulateProportions1
+)
+```
+
+The simulated data (`dat1`) is a list with the following components:
+
+```{r}
+names(dat1)
+```
+
+
+We attach the data “into the main search path” so we can use the component names directly, without referring to `dat1`:
+```{r 1.3}
+datExpr <- dat1$datExpr
+truemodule <- dat1$truemodule
+datME <- dat1$datME
+attach(ModuleEigengeneNetwork1)
+```
+
+To see what is in the data, we can simply type
+```{r 1.4}
+table(truemodule)
+dim(datExpr)
+```
+
+with the result
+
+```{r}
+dim(datExpr)
+```
+
+
+```{r}
+table(truemodule)
+```
+
+The output indicated we simulated 3000 genes in 50 samples, and a large number of the genes are “grey”, i.e., genes that are not part of any proper module. the next piece of code assigns gene and sample names to columns and rows of the expression data
+```{r 1.5}
+datExpr <- data.frame(datExpr)
+ArrayName <- paste("Sample", 1:dim(datExpr)[[1]], sep = "")
+# The following code is useful for outputting the simulated data
+GeneName <- paste("Gene", 1:dim(datExpr)[[2]], sep = "")
+dimnames(datExpr)[[1]] <- ArrayName
+dimnames(datExpr)[[2]] <- GeneName
+```
+
+# Loading of expression data
+
+## Loading of expression and trait data
+In this section we illustrate loading of expression data and clinical trait. The files holding the information are provided on the main tutorial page.
+```{r 2.1}
+datGeneSummary <- read.csv("../data/GeneSummaryTutorial.csv")
+datTraits <- read.csv("../data/TraitsTutorial.csv")
+datMicroarrays <- read.csv("../data/MicroarrayDataTutorial.csv")
+```
+
+A quick look at the content of `datMicroarrays`:
+
+```{r}
+datMicroarrays[1:5,1:5]
+```
+
+We now reformat the data and set appropriate gene and sample names:
+```{r 2.2}
+# This vector contains the microarray sample names
+ArrayName <- names(data.frame(datMicroarrays[, -1]))
+# This vector contains the gene names
+GeneName <- datMicroarrays$GeneName
+# We transpose the data so that the rows correspond to samples and the columns correspond to genes
+# Since the first column contains the gene names, we exclude it.
+datExpr <- data.frame(t(datMicroarrays[, -1]))
+names(datExpr) <- datMicroarrays[, 1]
+dimnames(datExpr)[[1]] <- names(data.frame(datMicroarrays[, -1]))
+# Also, since we simulated the data, we know the true module color:
+truemodule <- datGeneSummary$truemodule
+rm(datMicroarrays)
+
+```
+
+The first few entries in `datExpr` are now
+
+```{r}
+datExpr[1:5,1:5]
+```
+
+
+The input gene expression data should have the above format where column names correspond to gene (or probe) names, row names correspond to array names. We now isolate the microarray trait `y` from the read data
+```{r 2.3}
+# First, make sure that the array names in the file datTraits line up with those in the microarray data
+table(dimnames(datExpr)[[1]] == datTraits$ArrayName)
+# Next, define the microarray sample trait
+y <- datTraits$Trait.y
+```
+
+Because the loaded data are identical to the simulated ones, we do not need to save the results here. Subsequent sections of the tutorial use the results of the data simulation section (Section 1).
+
+# Basic data pre-processing
+
+## Basic data pre-processing
+In this section we illustrate basic data cleaning and pre-processing steps for expression data.
+
+### Identification of outlying samples
+We start by determining the mean expression per array and the number of missing values per array:
+```{r 3.1}
+meanExpressionByArray <- apply(datExpr, 1, mean, na.rm = T)
+NumberMissingByArray <- apply(is.na(data.frame(datExpr)), 1, sum)
+```
+
+A simple way to examine the mean expression per array is to use
+```{r 3.2, fig.cap="Figure 3.1:  A barplot of mean expression (`y`-axis) of all probes in each sample (`x`-axis). No arrays in the plot seem to have an outlying mean expression value.\\label{fig3.1}"}
+tibble(sample = 1:length(meanExpressionByArray), 
+       meanexpression = meanExpressionByArray) %>%
+  ggplot(aes(x = as.factor(sample), 
+             y = meanexpression)) +
+  geom_col() +
+  labs(x = "Sample",
+       y = "Mean expression",
+       title = "Mean expression across samples") +
+  theme(panel.background = element_rect(fill = NA,
+                                        color = 'black'),
+        axis.text.x = element_text(angle = 45,
+                                   hjust = 1,
+                                   vjust = 1))
+```
+
+whose output is shown in Figure 3.1\ref{fig3.1}. No arrays in the plot seem to have an outlying mean expression value. The numbers of missing entries in each array are
+
+```{r}
+NumberMissingByArray
+```
+
+We note that arrays with excessive numbers of missing data should be removed, for example as
+```{r 3.3}
+# Keep only arrays containing less than 500 missing entries
+KeepArray <- NumberMissingByArray < 500
+table(KeepArray)
+datExpr <- datExpr[KeepArray, ]
+y <- y[KeepArray]
+ArrayName[KeepArray]
+```
+
+### Handling missing data and zero variance in probe profiles
+Here we count the number of missing samples in each probe profile, and remove probes with extensive numbers of missing samples. In addition, we remove probes that do not vary at all.
+```{r 3.4}
+NumberMissingByGene <- apply(is.na(data.frame(datExpr)), 2, sum)
+# One could do a barplot(NumberMissingByGene), but the barplot is empty in this case.
+# It may be better to look at the numbers of missing samples using the summary method:
+summary(NumberMissingByGene)
+# Calculate the variances of the probes and the number of present entries
+variancedatExpr <- as.vector(apply(as.matrix(datExpr), 2, var, na.rm = T))
+no.presentdatExpr <- as.vector(apply(!is.na(as.matrix(datExpr)), 2, sum))
+# Another way of summarizing the number of pressent entries
+table(no.presentdatExpr)
+# Keep only genes whose variance is non-zero and have at least 4 present entries
+KeepGenes <- variancedatExpr > 0 & no.presentdatExpr >= 4
+table(KeepGenes)
+datExpr <- datExpr[, KeepGenes]
+GeneName <- GeneName[KeepGenes]
+```
+
+In this case, since the data is simulated without missing data or zero-variance probes, all probes are retained.
+
+### Rudimentary detection of outlier samples
+We use hierarchical clustering with the Euclidean distance to determine whether there are array (sample) outliers:
+```{r 3.5, fig.cap="Figure 3.2: Clustering dendrogram of samples based on their Euclidean distance together with a color indication of the trait `y` (1=black, 2=red). The dendrogram shows no obvious outliers. The colors encoding the trait values do not lne up with branches, suggesting that the samples with `y` = 1 are not “globally distinct” from those with `y` = 2\\label{fig3.2}"}
+sizeGrWindow(9, 5)
+plotClusterTreeSamples(datExpr = datExpr, y = y)
+```
+
+The output is shown in Figure 3.2\ref{fig3.2}. There are no no obvious array outliers. If there are suscpicious samples, they should be removed from the analysis. In the figure, the microarray samples are colored by the outcome `y` (1=black, 2=red). Since the colors dont line up with the branches, we find no evidence that samples with `y` = 1 are "globally distinct" from those with `y` = 2. When clustering microarray samples, we recommend to use the Euclidean distance. In contrast, we recommend to use the topological overlap based dissimilarity for clustering genes. Below, we investigate different methods for clustering genes (gene expression profiles).

@@ -1,0 +1,913 @@
+---
+title: 'Tutorial for the WGCNA package for R:: Using simulated data to evaluate different
+  module detection methods and gene screening approaches'
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+  html_notebook:
+    df_print: paged
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+---
+# Simulation of expression and trait data
+
+## Setting up the R session
+Before starting, the user should choose a working directory, preferably a directory devoted exclusively for this tutorial. After starting an R session, change working directory, load the requisite packages and set standard options:
+```{r 0, message=FALSE, warning=FALSE}
+# If necessary, change the path below to the directory where the data files are stored.
+# "." means current directory.  On Windows use a forward slash / instead of the usual \.
+workingDir <- "."
+setwd(workingDir)
+# Load packages
+librarian::shelf(magrittr, tidyverse, data.table, glue, WGCNA, BiocParallel, cluster)
+library(WGCNA)
+# The following setting is important, do not omit.
+options(stringsAsFactors = FALSE)
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+## Simulation of expression and trait data
+In this section we illustrate simulation of expression data with a simple module structure.
+
+### Building the module structure
+We choose the basic parameters of the simulated data set: we will simulate 3000 genes in 50 samples. The genes will fall into five proper modules (labeled turquoise, blue, brown, green, and yellow) and a relatively large number of genes will be simulated outside of the proper modules ("grey" genes).
+```{r 1.1}
+# Here are input parameters of the simulation model
+# number of samples or microarrays in the training data
+no.obs <- 50
+# now we specify the true measures of eigengene significance
+# recall that ESturquoise=cor(y,MEturquoise)
+ESturquoise <- 0
+ESbrown <- -.6
+ESgreen <- .6
+ESyellow <- 0
+# Note that we donâ€™t specify the eigengene significance of the blue module
+# since it is highly correlated with the turquoise module.
+ESvector <- c(ESturquoise, ESbrown, ESgreen, ESyellow)
+# number of genes
+nGenes1 <- 3000
+# proportion of genes in the turquoise, blue, brown, green, and yellow module #respectively.
+simulateProportions1 <- c(0.2, 0.15, 0.08, 0.06, 0.04)
+# Note that the proportions donâ€™t add up to 1. The remaining genes will be colored grey,
+# ie the grey genes are non-module genes.
+# set the seed of the random number generator. As a homework exercise change this seed.
+set.seed(1)
+# Step 1: simulate a module eigengene network.
+# Training Data Set I
+MEgreen <- rnorm(no.obs)
+scaledy <- MEgreen * ESgreen + sqrt(1 - ESgreen^2) * rnorm(no.obs)
+y <- ifelse(scaledy > median(scaledy), 2, 1)
+MEturquoise <- ESturquoise * scaledy + sqrt(1 - ESturquoise^2) * rnorm(no.obs)
+# we simulate a strong dependence between MEblue and MEturquoise
+MEblue <- .6 * MEturquoise + sqrt(1 - .6^2) * rnorm(no.obs)
+MEbrown <- ESbrown * scaledy + sqrt(1 - ESbrown^2) * rnorm(no.obs)
+MEyellow <- ESyellow * scaledy + sqrt(1 - ESyellow^2) * rnorm(no.obs)
+ModuleEigengeneNetwork1 <- data.frame(y, MEturquoise, MEblue, MEbrown, MEgreen, MEyellow)
+```
+The variable `ModuleEigengeneNetwork1` contains the "seed" eigengenes and a simulated clinical trait `y`. The eigengene network can be simply inspected by:
+```{r}
+signif(cor(ModuleEigengeneNetwork1, use="p"),2)
+```
+
+### Simulating gene expressions around the module eigengenes
+The package contains a convenient function to simulate five modules which we call below:
+```{r 1.2}
+dat1 <- simulateDatExpr5Modules(
+  MEturquoise = ModuleEigengeneNetwork1$MEturquoise,
+  MEblue = ModuleEigengeneNetwork1$MEblue,
+  MEbrown = ModuleEigengeneNetwork1$MEbrown,
+  MEyellow = ModuleEigengeneNetwork1$MEyellow,
+  MEgreen = ModuleEigengeneNetwork1$MEgreen,
+  nGenes = nGenes1,
+  simulateProportions = simulateProportions1
+)
+```
+The simulated data (`dat1`) is a list with the following components:
+```{r}
+names(dat1)
+```
+We attach the data "into the main search path" so we can use the component names directly, without referring to `dat1`:
+```{r 1.3}
+datExpr <- dat1$datExpr
+truemodule <- dat1$truemodule
+datME <- dat1$datME
+attach(ModuleEigengeneNetwork1)
+```
+To see what is in the data, we can simply type
+```{r 1.4}
+table(truemodule)
+dim(datExpr)
+```
+The output indicated we simulated 3000 genes in 50 samples, and a large number of the genes are "grey", i.e., genes that are not part of any proper module. the next piece of code assigns gene and sample names to columns and rows of the expression data:
+```{r 1.5}
+datExpr <- data.frame(datExpr)
+ArrayName <- paste("Sample", 1:dim(datExpr)[[1]], sep = "")
+# The following code is useful for outputting the simulated data
+GeneName <- paste("Gene", 1:dim(datExpr)[[2]], sep = "")
+dimnames(datExpr)[[1]] <- ArrayName
+dimnames(datExpr)[[2]] <- GeneName
+```
+# Loading of expression data
+
+## Loading of expression and trait data
+In this section we illustrate loading of expression data and clinical trait. The files holding the information are provided on the main tutorial page.
+```{r 2.1}
+datGeneSummary <- read.csv("../data/GeneSummaryTutorial.csv")
+datTraits <- read.csv("../data/TraitsTutorial.csv")
+datMicroarrays <- read.csv("../data/MicroarrayDataTutorial.csv")
+```
+A quick look at the content of `datMicroarrays`:
+```{r}
+datMicroarrays[1:5,1:5]
+```
+We now reformat the data and set appropriate gene and sample names:
+```{r 2.2}
+# This vector contains the microarray sample names
+ArrayName <- names(data.frame(datMicroarrays[, -1]))
+# This vector contains the gene names
+GeneName <- datMicroarrays$GeneName
+# We transpose the data so that the rows correspond to samples and the columns correspond to genes
+# Since the first column contains the gene names, we exclude it.
+datExpr <- data.frame(t(datMicroarrays[, -1]))
+names(datExpr) <- datMicroarrays[, 1]
+dimnames(datExpr)[[1]] <- names(data.frame(datMicroarrays[, -1]))
+# Also, since we simulated the data, we know the true module color:
+truemodule <- datGeneSummary$truemodule
+```
+The first few entries in `datExpr` are now
+```{r}
+datExpr[1:5,1:5]
+```
+The input gene expression data should have the above format where column names correspond to gene (or probe) names, row names correspond to array names. We now isolate the microarray trait `y` from the read data
+```{r 2.3}
+# First, make sure that the array names in the file datTraits line up with those in the microarray data
+table(dimnames(datExpr)[[1]] == datTraits$ArrayName)
+# Next, define the microarray sample trait
+y <- datTraits$Trait.y
+```
+Because the loaded data are identical to the simulated ones, we do not need to save the results here. Subsequent sections of the tutorial use the results of the data simulation section (Section 1).
+
+# Basic data pre-processing
+## Basic data pre-processing
+In this section we illustrate basic data cleaning and pre-processing steps for expression data.
+### Identification of outlying samples
+We start by determining the mean expression per array and the number of missing values per array:
+```{r 3.1}
+meanExpressionByArray <- apply(datExpr, 1, mean, na.rm = T)
+NumberMissingByArray <- apply(is.na(data.frame(datExpr)), 1, sum)
+```
+A simple way to examine the mean expression per array is to use
+```{r 3.2, fig.cap="Figure 3.1:  A barplot of mean expression (`y`-axis) of all probes in each sample (`x`-axis). No arrays in the plot seem to have an outlying mean expression value.\\label{fig3.1}"}
+tibble(sample = 1:length(meanExpressionByArray), 
+       meanexpression = meanExpressionByArray) %>%
+  ggplot(aes(x = as.factor(sample), 
+             y = meanexpression)) +
+  geom_col() +
+  labs(x = "Sample",
+       y = "Mean expression",
+       title = "Mean expression across samples") +
+  theme(panel.background = element_rect(fill = NA,
+                                        color = 'black'),
+        axis.text.x = element_text(angle = 45,
+                                   hjust = 1,
+                                   vjust = 1))
+```
+whose output is shown in Figure 3.1\ref{fig3.1}. No arrays in the plot seem to have an outlying mean expression value. The numbers of missing entries in each array are
+```{r}
+NumberMissingByArray
+```
+We note that arrays with excessive numbers of missing data should be removed, for example as
+```{r 3.3}
+# Keep only arrays containing less than 500 missing entries
+KeepArray <- NumberMissingByArray < 500
+table(KeepArray)
+datExpr <- datExpr[KeepArray, ]
+y <- y[KeepArray]
+ArrayName[KeepArray]
+```
+### Handling missing data and zero variance in probe profiles
+Here we count the number of missing samples in each probe profile, and remove probes with extensive numbers of missing samples. In addition, we remove probes that do not vary at all.
+```{r 3.4}
+NumberMissingByGene <- apply(is.na(data.frame(datExpr)), 2, sum)
+# One could do a barplot(NumberMissingByGene), but the barplot is empty in this case.
+# It may be better to look at the numbers of missing samples using the summary method:
+summary(NumberMissingByGene)
+# Calculate the variances of the probes and the number of present entries
+variancedatExpr <- as.vector(apply(as.matrix(datExpr), 2, var, na.rm = T))
+no.presentdatExpr <- as.vector(apply(!is.na(as.matrix(datExpr)), 2, sum))
+# Another way of summarizing the number of pressent entries
+table(no.presentdatExpr)
+# Keep only genes whose variance is non-zero and have at least 4 present entries
+KeepGenes <- variancedatExpr > 0 & no.presentdatExpr >= 4
+table(KeepGenes)
+datExpr <- datExpr[, KeepGenes]
+GeneName <- GeneName[KeepGenes]
+```
+In this case, since the data is simulated without missing data or zero-variance probes, all probes are retained.
+
+### Rudimentary detection of outlier samples
+We use hierarchical clustering with the Euclidean distance to determine whether there are array (sample) outliers:
+```{r 3.5, fig.cap="Figure 3.2: Clustering dendrogram of samples based on their Euclidean distance together with a color indication of the trait `y` (1=black, 2=red). The dendrogram shows no obvious outliers. The colors encoding the trait values do not lne up with branches, suggesting that the samples with `y` = 1 are not 'globally distinct' from those with `y` = 2\\label{fig3.2}"}
+sizeGrWindow(9, 5)
+plotClusterTreeSamples(datExpr = datExpr, y = y)
+```
+The output is shown in Figure 3.2\ref{fig3.2}. There are no no obvious array outliers. If there are suscpicious samples, they should be removed from the analysis. In the figure, the microarray samples are colored by the outcome `y` (1=black, 2=red). Since the colors dont line up with the branches, we find no evidence that samples with `y` = 1 are "globally distinct" from those with `y` = 2. When clustering microarray samples, we recommend to use the Euclidean distance. In contrast, we recommend to use the topological overlap based dissimilarity for clustering genes. Below, we investigate different methods for clustering genes (gene expression profiles).
+
+# Standard gene screening
+## Standard gene screening based on marginal correlation
+In this section we use marginal Pearson to relate genes to the trait `y`.
+```{r}
+GS1 <- as.numeric(cor(y, datExpr, use = "p"))
+# Network terminology: GS1 will be referred to as signed gene significance measure
+p.Standard <- corPvalueFisher(GS1, nSamples = length(y))
+# since the q-value function has problems with missing data, we use the following trick
+p.Standard2 <- p.Standard
+p.Standard2[is.na(p.Standard)] <- 1
+q.Standard <- qvalue(p.Standard2)$qvalues
+# Form a data frame to hold the results
+StandardGeneScreeningResults <- data.frame(GeneName, PearsonCorrelation = GS1, p.Standard, q.Standard)
+```
+We take a quick look at the content of `StandardGeneScreeningResults`:
+```{r}
+head(StandardGeneScreeningResults)
+```
+We note that gene screening based on the Pearson correlation `GS1` is equivalent to screening based on the Student T test statistic for a fixed sample size. The reason is that the Student T-test statistic is $t = \sqrt{m − 2}∗GS1/\sqrt{1 − GS1^2}$, where `m` is the number of microarrays. Note that the `t` statistic is a monotonic function of the correlation GS1 since `m` is fixed for each gene.
+
+### Evaluation of standard screening
+We now determine how many noise genes are in the top say 100 genes returned by standard screening. Recall that the eigengene significances were
+```{r}
+tibble(ESturquoise, ESbrown, ESgreen,  ESyellow)
+```
+This implies that grey non-module genes, turquoise genes, the related blue genes, and yellow genes are noise.  The following vector indicates which genes are noise (as simulated):
+```{r}
+NoiseGeneIndicator <- is.element(truemodule, c("turquoise", "blue", "yellow", "grey")) + .0
+SignalGeneIndicator <- 1 - NoiseGeneIndicator
+```
+Note the proportion of noise among the top 20 most significant genes:
+```{r}
+mean(NoiseGeneIndicator[rank(p.Standard)<=20])
+mean(NoiseGeneIndicator[rank(p.Standard)<=200])
+mean(NoiseGeneIndicator[rank(p.Standard)<=100])
+```
+This implies that 48% of the top 100 most significant genes are noise. That is quite bad.  
+**How many noise genes have a q-value less than or equal to 0.20?** The following code will give the answer:
+```{r}
+table(q.Standard < .20)
+mean(NoiseGeneIndicator[q.Standard <= 0.20])
+```
+Only 3 genes have a q-value smaller than .2. Two of the three are noise genes.  
+**Discussion of the performance of standard screening.** The performance of standard screening is unsatisfactory. For example, among the top 100 most significant genes (lowest p-value), 55% represent noise. One major reason for this poor performance is that a standard analysis ignores the correlations between gene expression profiles. In other words, it ignores the module structure inherent in the data. We find it biologically and statistically more meaningful to carry out a module based analysis, which first identifies modules and next uses module membership to screen for meaningful genes [1, 2]. WGCNA is a systems biologic gene screening method that makes use of module membership information (or equivalently intramodular connectivity). In the following sections, we will review clustering procedures, module detection methods, module eigengenes, module membership, intramodular connectivity and finally network based gene screening methods.  
+In the following, we describe how to carry out a detailed WGCNA analysis. This analysis reviews basic clustering procedures and provides an in-depth look at important concepts used by WGCNA. 
+
+# Construction of a weighted gene co-expression network and network modules
+In this section we provide a step-by-step overview of gene network construction and module detection.
+## Defining a weighted gene co-expression network
+We illustrate network construction and evaluation of scale free topology. Recall that the genes correspond to the columns of `datExpr`.
+```{r fig.fullwidth = TRUE, fig.cap="Figure 5.1: The left panel shows a histogram of network connectivities. The right panel shows a log-log plot of the same histogram. The approximate straight line relationship (high *R^2* value) shows approximate scale free topology. In most applications we find that scale free topology is at least approximately satisfied when a high power is chosen for defining the adjacency matrix. We should point out that is not necessary that a network satisfies scale free topology; scale free topology may not be satisfied if the data are comprised of globally very distinct groups of samples (e.g. different tissues types). Poor fit to scale free topology may also indicate the presence of array outliers.\\label{fig5.1}"}
+# here we define the adjacency matrix using soft thresholding with beta=6
+ADJ1 <- abs(cor(datExpr, use = "p"))^6
+# When you have relatively few genes (<5000) use the following code
+k <- as.vector(apply(ADJ1, 2, sum, na.rm = T))
+# When you have a lot of genes use the following code
+k <- softConnectivity(datE = datExpr, power = 6)
+# Plot a histogram of k and a scale free topology plot
+sizeGrWindow(10, 5)
+par(mfrow = c(1, 2))
+hist(k)
+scaleFreePlot(k, main = "Check scale free topology\n")
+```
+The resulting plot is shown in Figure 5.1\ref{fig5.1}. The approximate straight line relationship (high *R^2* value, right panel in Figure 5.1) shows approximate scale free topology. In most applications we find that scale free topology is at least approximately satisfied when a high power is chosen for defining the adjacency matrix. We should point out that is not necessary that a network satisfies scale free topology; scale free topology may not be satisfied if the data are comprised of globally very distinct groups of samples (e.g. different tissues types). Poor fit to scale free topology may also indicate the presence of array outliers.
+
+## Computational restrictions on the number of genes
+For computational reasons, we restrict the network analysis to 3600 most connected genes
+```{r}
+datExpr <- datExpr[, rank(-k, ties.method = "first") <= 3600]
+```
+This restriction is only necessary when constructing the network in a step-by-step, "manual" way. The user can also use the automatic one-step function `blockwiseModules` that is able to handle large data sets. We refer the reader to Tutorials I, II (mouse data analysis) for examples of using the automatic function on large data sets.
+
+## Comparing various module detection methods
+### Definition of clustering dissimilarity from adjacency
+Many clustering procedures require a dissimilarity matrix as input. We define a dissimilarity based on adjacency:
+```{r}
+# Turn adjacency into a measure of dissimilarity
+dissADJ <- 1 - ADJ1
+```
+### Use of topologial overlap to define dissimilarity
+Adjacency can be used to define a separate measure of similarity, the Topological Overlap Matrix(TOM) [2, 1]:
+```{r}
+#TOMdist doesn't work; however, `1-TOMsimilarity` is the same thing.
+dissTOM <- 1-TOMsimilarity(ADJ1, TOMType = "unsigned")
+```
+In the following subsections we show that Partitioning Around Medoids (PAM) is not a good choice for clustering genes because it forces all genes into a module. We then illustrate the use of hierarchical clustering and several branch cut methods.  
+
+### Partitioning Around Medoids based on adjacency
+We use PAM with 3 different numbers of clusters:
+```{r}
+pam4 <- pam(as.dist(dissADJ), 4)
+pam5 <- pam(as.dist(dissADJ), 5)
+pam6 <- pam(as.dist(dissADJ), 6)
+# Cross-tabulte the detected and the true (simulated) module membership:
+table(pam4$clustering, truemodule)
+table(pam5$clustering, truemodule)
+table(pam6$clustering, truemodule)
+```
+The rows correspond to clusters found by PAM, while the columns correspond to simulated modules. Numbers in the table are gene counts in the intersection of the respective simulated and found modules. PAM performs terribly on this data set since the grey, non-module genes are "forced" into the observed modules (corresponding to the rows). In general, partitioning methods that dont allow for unclustered objects will have a problem on this simulated data
+set.  
+
+### Partitioning Around Medoids based on topological overlap
+We again use PAM with the same three different numbers of clusters:
+```{r}
+pamTOM4 <- pam(as.dist(dissTOM), 4)
+pamTOM5 <- pam(as.dist(dissTOM), 5)
+pamTOM6 <- pam(as.dist(dissTOM), 6)
+# Cross-tabulte the detected and the true (simulated) module membership:
+table(pamTOM4$clustering, truemodule)
+table(pamTOM5$clustering, truemodule)
+table(pamTOM6$clustering, truemodule)
+```
+
+As above, the rows correspond to clusters found by PAM, while the columns correspond to simulated modules. Numbers in the table are gene counts in the intersection of the respective simulated and found modules. The performance of pam is not good. This is why we will use hierarchical clustering.  
+
+### Average linkage hierachical clustering with adjacency-based dissimilarity
+Here we illustrate the use of average linkage hierachical clustering.
+```{r fig.cap="Figure 2: Gene clustering tree (dendrogram) obtained by hierarchical clustering of adjacency-based dissimilarity. The color row below the dendrogram indicates module membership\\label{fig5.2}"}
+hierADJ <- hclust(as.dist(dissADJ), method = "average")
+# Plot the resulting clustering tree together with the true color assignment
+sizeGrWindow(10, 5)
+plotDendroAndColors(hierADJ,
+  colors = data.frame(truemodule), dendroLabels = FALSE, hang = 0.03,
+  main = "Gene hierarchical clustering dendrogram and simulated module colors"
+)
+```
+The result is shown in Figure 5.2\ref{fig5.2}. Note that the branches correspond to the true modules. The question now is how should we cut the branches of the dendrogram to determine module membership?  
+
+### Module definition via static (fixed) height cut-off
+By our definition, modules correspond to branches of the tree. The question is what height cut-off should be used? This depends on the biology. Large heigth values lead to big modules, small values lead to small but tight modules.  
+In reality, the user should use different thresholds `h1` (red below) to assess how robust the findings are. The function `cutreeStaticColor` colors each gene by the branches that result from choosing a particular height cut-off. The label "grey" is reserved to color genes that are not part of any module. Here we only consider modules that contain at least minSize genes
+```{r fig.caption="Figure 3: Gene clustering tree (dendrogram) obtained by hierarchical clustering of adjacency-based dissimilarity. The color rows below the dendrogram indicate identified and simulated module membership. The static height cut-off method works quite well at retrieving the true modules. More precisely, it works well at retrieving highly connected intramodular hub genes in the modules. However, it misses a lot of genes at the fringes of the modules.\\label{fig5.3}"}
+colorStaticADJ <- as.character(cutreeStaticColor(hierADJ, cutHeight = .99, minSize = 20))
+# Plot the dendrogram with module colors
+sizeGrWindow(10, 5)
+plotDendroAndColors(hierADJ,
+  colors = data.frame(truemodule, colorStaticADJ),
+  dendroLabels = FALSE, abHeight = 0.99,
+  main = "Gene dendrogram and module colors"
+)
+```
+The resulting plot is shown in Figure 5.3\ref{fig5.3}. The static height cut-off method works quite well at retrieving the true modules. More precisely, it works well at retrieving highly connected intramodular hub genes in the modules. However, it misses a lot of genes at the fringes of the modules.  
+
+### Module definition via dynamic branch cutting methods
+We now use two Dynamic Tree Cut methods in which the height cut-off plays a minor role. The first method is called the "tree" method and only uses the dendrogram as input.
+```{r}
+branch.number <- cutreeDynamic(hierADJ, method = "tree")
+# This function transforms the branch numbers into colors
+colorDynamicADJ <- labels2colors(branch.number)
+```
+The second method is called "hybrid" and is a hybrid between hclust and pam. As input it requires both a dendrogram and the dissimilarity that was used to create the dendrogram.
+```{r fig.cap="Figure 4: Gene clustering tree (dendrogram) obtained by hierarchical clustering of adjacency-based dissimilarity. The color rows below the dendrogram indicate module membership identified by the three methods discussed in text and the simulated module membership. The static method (3rd band) has high specificity but low sensitivity, i.e. its module membership assignment is very accurate but it misses a lot of genes (too many grey genes). In contrast, the dynamic hybrid method (first band) has high sensitivity but low specificity. Actually, we simulated the grey genes so that they would have a weak 'background' correlation with the turquoise module genes. Therefore, it comes as no surprise that the hybrid method assigns turquoise to many grey module genes. The 'tree' method (second color band) does not perform very well since it splits some of the branches into two sub-branches. As we demonstrate below, one should always look at the tree and the correlations between the module eigengenes to determine whether two modules should be merged.\\label{fig5.4}"}
+colorDynamicHybridADJ <- labels2colors(cutreeDynamic(hierADJ,
+  distM = dissADJ,
+  cutHeight = 0.998, deepSplit = 2, pamRespectsDendro = FALSE
+))
+
+# Plot results of all module detection methods together:
+sizeGrWindow(10, 5)
+plotDendroAndColors(
+  dendro = hierADJ,
+  colors = data.frame(
+    truemodule, colorStaticADJ,
+    colorDynamicADJ, colorDynamicHybridADJ
+  ),
+  dendroLabels = FALSE, marAll = c(0.2, 8, 2.7, 0.2),
+  main = "Gene dendrogram and module colors"
+)
+```
+The plot is shown in Figure 5.4\ref{fig5.4}. The static method (3rd band) has high specificity but low sensitivity, i.e. its module membership assignment is very accurate but it misses a lot of genes (too many grey genes). In contrast, the dynamic hybrid method (first band) has high sensitivity but low specificity. Actually, we simulated the grey genes so that they would have a weak "background" correlation with the turquoise module genes. Therefore, it comes as no surprise that the hybrid method assigns turquoise to many grey module genes. The "tree" method (second color band) does not perform very well since it splits some of the branches into two sub-branches. As we demonstrate below, one should always look at the tree and the correlations between the module eigengenes to determine whether two modules should be merged.  
+
+### Module definition using the topological overlap based dissimilarity
+We now use the topological overlap based dissimilarity as input to the clustering methods we used above 
+```{r fig.cap="Figure 5.5: Gene clustering tree (dendrogram) obtained by hierarchical clustering of TOM-based dissimilarity. The color rows below the dendrogram indicate module membership identified by the three methods discussed in text and the simulated module membership. The dynamic hybrid method leads to modules that are slightly too large. In practice this would not be a problem since one typically focuses on the tip of the branches (highly connected hub genes). Also it would have a very small effect on the definition of the module eigengenes.\\label{fig5.5}"}
+# Calculate the dendrogram
+hierTOM <- hclust(as.dist(dissTOM), method = "average")
+# The reader should vary the height cut-off parameter h1
+# (related to the y-axis of dendrogram) in the following
+colorStaticTOM <- as.character(cutreeStaticColor(hierTOM, cutHeight = .99, minSize = 20))
+colorDynamicTOM <- labels2colors(cutreeDynamic(hierTOM, method = "tree"))
+colorDynamicHybridTOM <- labels2colors(cutreeDynamic(hierTOM,
+  distM = dissTOM, cutHeight = 0.998,
+  deepSplit = 2, pamRespectsDendro = FALSE
+))
+# Now we plot the results
+sizeGrWindow(10, 5)
+plotDendroAndColors(hierTOM,
+  colors = data.frame(
+    truemodule, colorStaticTOM,
+    colorDynamicTOM, colorDynamicHybridTOM
+  ),
+  dendroLabels = FALSE, marAll = c(1, 8, 3, 1),
+  main = "Gene dendrogram and module colors, TOM dissimilarity"
+)
+```
+The result is shown in Figure 5.5\ref{fig5.5}. The dynamic hybrid method leads to modules that are slightly too large. In practice this would not be a problem since one typically focuses on the tip of the branches (highly connected hub genes). Also it would have a very small effect on the definition of the module eigengenes.  
+
+### Which dissimilarity measure and which branch cutting method performs best in this data set?
+The answer depends on threshold parameters used for branch cutting. For illustration, we carry out a brute force comparison. In the following, we create tables for relating the different module assignements to the true module colors.
+```{r}
+tabStaticADJ <- table(colorStaticADJ, truemodule)
+tabStaticTOM <- table(colorStaticTOM, truemodule)
+tabDynamicADJ <- table(colorDynamicADJ, truemodule)
+tabDynamicTOM <- table(colorDynamicTOM, truemodule)
+tabDynamicHybridADJ <- table(colorDynamicHybridADJ, truemodule)
+tabDynamicHybridTOM <- table(colorDynamicHybridTOM, truemodule)
+```
+Next, we use the (unadjusted) Rand index to measure agreement. This computes the Rand index for each table:
+```{r}
+randIndex(tabStaticADJ, adjust = F)
+randIndex(tabStaticTOM, adjust = F)
+randIndex(tabDynamicADJ, adjust = F)
+randIndex(tabDynamicTOM, adjust = F)
+randIndex(tabDynamicHybridADJ, adjust = F)
+randIndex(tabDynamicHybridTOM, adjust = F)
+```
+
+In this data set, dissTOM performs better than dissADJ for the first two branch cutting method. The results for the Dynamic Hybrid methods are very  similar. In the following, we will proceed with the observed modules from DynamicHybridTOM. Here is the cross tabulation of colorDynamicHybridTOM with the true module assignment:
+```{r}
+tabDynamicHybridTOM
+```
+We define a shorter name for the module assignemnt of choice:
+```{r}
+colorh1 <- colorDynamicHybridTOM
+```
+
+#6
+
+```{r}
+datME <- moduleEigengenes(datExpr, colorh1)$eigengenes
+signif(cor(datME, use = "p"), 2)
+```
+
+```{r}
+dissimME <- (1 - t(cor(datME, method = "p"))) / 2
+hclustdatME <- hclust(as.dist(dissimME), method = "average")
+# Plot the eigengene dendrogram
+par(mfrow = c(1, 1))
+plot(hclustdatME, main = "Clustering tree based of the module eigengenes")
+```
+
+```{r}
+sizeGrWindow(8, 9)
+plotMEpairs(datME, y = y)
+```
+
+```{r}
+signif(cor(datME, ModuleEigengeneNetwork1[, -1]), 2)
+```
+
+```{r}
+sizeGrWindow(8, 9)
+par(mfrow = c(3, 1), mar = c(1, 2, 4, 1))
+which.module <- "turquoise"
+plotMat(t(scale(datExpr[, colorh1 == which.module ])),
+  nrgcols = 30, rlabels = T,
+  clabels = T, rcols = which.module,
+  title = which.module
+)
+# for the second (blue) module we use
+which.module <- "blue"
+plotMat(t(scale(datExpr[, colorh1 == which.module ])),
+  nrgcols = 30, rlabels = T,
+  clabels = T, rcols = which.module,
+  title = which.module
+)
+which.module <- "brown"
+plotMat(t(scale(datExpr[, colorh1 == which.module ])),
+  nrgcols = 30, rlabels = T,
+  clabels = T, rcols = which.module,
+  title = which.module
+)
+```
+
+```{r}
+sizeGrWindow(8, 7)
+which.module <- "green"
+ME <- datME[, paste("ME", which.module, sep = "")]
+par(mfrow = c(2, 1), mar = c(0.3, 5.5, 3, 2))
+plotMat(t(scale(datExpr[, colorh1 == which.module ])),
+  nrgcols = 30, rlabels = F, rcols = which.module,
+  main = which.module, cex.main = 2
+)
+par(mar = c(5, 4.2, 0, 0.7))
+barplot(ME,
+  col = which.module, main = "", cex.main = 2,
+  ylab = "eigengene expression", xlab = "array sample"
+)
+```
+
+```{r}
+signif(cor(y, datME, use = "p"), 2)
+```
+
+```{r}
+cor.test(y, datME$MEbrown)
+```
+
+```{r}
+p.values <- corPvalueStudent(cor(y, datME, use = "p"), nSamples = length(y))
+```
+
+```{r}
+GS1 <- as.numeric(cor(y, datExpr, use = "p"))
+GeneSignificance <- abs(GS1)
+# Next module significance is defined as average gene significance.
+ModuleSignificance <- tapply(GeneSignificance, colorh1, mean, na.rm = T)
+```
+
+```{r}
+sizeGrWindow(8, 7)
+par(mfrow = c(1, 1))
+plotModuleSignificance(GeneSignificance, colorh1)
+```
+
+#7
+
+```{r}
+ADJ1 <- abs(cor(datExpr, use = "p"))^6
+Alldegrees1 <- intramodularConnectivity(ADJ1, colorh1)
+head(Alldegrees1)
+```
+
+```{r}
+colorlevels <- unique(colorh1)
+sizeGrWindow(9, 6)
+par(mfrow = c(2, as.integer(0.5 + length(colorlevels) / 2)))
+par(mar = c(4, 5, 3, 1))
+for (i in c(1:length(colorlevels)))
+{
+  whichmodule <- colorlevels[[i]]
+  restrict1 <- (colorh1 == whichmodule)
+  verboseScatterplot(Alldegrees1$kWithin[restrict1],
+    GeneSignificance[restrict1],
+    col = colorh1[restrict1],
+    main = whichmodule,
+    xlab = "Connectivity", ylab = "Gene Significance", abline = TRUE
+  )
+}
+```
+
+```{r}
+datKME <- signedKME(datExpr, datME, outputColumnName = "MM.")
+# Display the first few rows of the data frame
+head(datKME)
+```
+
+```{r}
+FilterGenes <- abs(GS1) > .2 & abs(datKME$MM.brown) > .8
+table(FilterGenes)
+```
+
+```{r}
+dimnames(data.frame(datExpr))[[2]][FilterGenes]
+```
+
+```{r}
+sizeGrWindow(8, 6)
+par(mfrow = c(2, 2))
+# We choose 4 modules to plot: turquoise, blue, brown, green.
+# For simplicity we write the code out explicitly for each module.
+which.color <- "turquoise"
+restrictGenes <- colorh1 == which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+  (datKME[restrictGenes, paste("MM.", which.color, sep = "")])^6,
+  col = which.color,
+  xlab = "Intramodular Connectivity",
+  ylab = "(Module Membership)^6"
+)
+
+which.color <- "blue"
+restrictGenes <- colorh1 == which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+  (datKME[restrictGenes, paste("MM.", which.color, sep = "")])^6,
+  col = which.color,
+  xlab = "Intramodular Connectivity",
+  ylab = "(Module Membership)^6"
+)
+
+which.color <- "brown"
+restrictGenes <- colorh1 == which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+  (datKME[restrictGenes, paste("MM.", which.color, sep = "")])^6,
+  col = which.color,
+  xlab = "Intramodular Connectivity",
+  ylab = "(Module Membership)^6"
+)
+
+which.color <- "green"
+restrictGenes <- colorh1 == which.color
+verboseScatterplot(Alldegrees1$kWithin[ restrictGenes],
+  (datKME[restrictGenes, paste("MM.", which.color, sep = "")])^6,
+  col = which.color,
+  xlab = "Intramodular Connectivity",
+  ylab = "(Module Membership)^6"
+)
+```
+
+```{r}
+NS1 <- networkScreening(
+  y = y, datME = datME, datExpr = datExpr,
+  oddPower = 3, blockSize = 1000, minimumSampleSize = 4,
+  addMEy = TRUE, removeDiag = FALSE, weightESy = 0.5
+)
+```
+
+```{r}
+# network screening analysis
+mean(NoiseGeneIndicator[rank(NS1$p.Weighted, ties.method = "first") <= 100])
+# standard analysis based on the correlation p-values (or Student T test)
+mean(NoiseGeneIndicator[rank(NS1$p.Standard, ties.method = "first") <= 100]) 
+```
+
+```{r}
+topNumbers <- c(10, 20, 50, 100)
+for (i in c(1:length(topNumbers)))
+{
+  print(paste("Proportion of noise genes in the top", topNumbers[i], "list"))
+  WGCNApropNoise <- mean(NoiseGeneIndicator[rank(NS1$p.Weighted, ties.method = "first") <= topNumbers[i]])
+  StandardpropNoise <- mean(NoiseGeneIndicator[rank(NS1$p.Standard, ties.method = "first") <= topNumbers[i]])
+  print(paste(
+    "WGCNA, proportion of noise=", WGCNApropNoise,
+    ", Standard, prop. noise=", StandardpropNoise
+  ))
+  if (WGCNApropNoise < StandardpropNoise) print("WGCNA wins")
+  if (WGCNApropNoise == StandardpropNoise) print("both methods tie")
+  if (WGCNApropNoise > StandardpropNoise) print("standard screening wins")
+} 
+```
+
+
+```{r}
+# Form a data frame containing standard and network screening results
+CorPrediction1 <- data.frame(GS1, NS1$cor.Weighted)
+cor.Weighted <- NS1$cor.Weighted
+# Plot the comparison
+sizeGrWindow(8, 6)
+verboseScatterplot(cor.Weighted, GS1,
+  main = "Network-based weighted correlation versus Pearson correlation\n",
+  col = truemodule, cex.main = 1.2
+)
+abline(0, 1)
+```
+
+```{r}
+set.seed(2)
+nSamples2 <- 2000
+MEgreen <- rnorm(nSamples2)
+scaledy2 <- MEgreen * ESgreen + sqrt(1 - ESgreen^2) * rnorm(nSamples2)
+y2 <- ifelse(scaledy2 > median(scaledy2), 2, 1)
+MEturquoise <- ESturquoise * scaledy2 + sqrt(1 - ESturquoise^2) * rnorm(nSamples2)
+# we simulate a strong dependence between MEblue and MEturquoise
+MEblue <- .6 * MEturquoise + sqrt(1 - .6^2) * rnorm(nSamples2)
+MEbrown <- ESbrown * scaledy2 + sqrt(1 - ESbrown^2) * rnorm(nSamples2)
+MEyellow <- ESyellow * scaledy2 + sqrt(1 - ESyellow^2) * rnorm(nSamples2)
+# Put together a data frame of eigengenes
+ModuleEigengeneNetwork2 <- data.frame(y = y2, MEturquoise, MEblue, MEbrown, MEgreen, MEyellow)
+# Simulate the expression data
+dat2 <- simulateDatExpr5Modules(
+  MEturquoise = ModuleEigengeneNetwork2$MEturquoise,
+  MEblue = ModuleEigengeneNetwork2$MEblue, MEbrown = ModuleEigengeneNetwork2$MEbrown,
+  MEyellow = ModuleEigengeneNetwork2$MEyellow,
+  MEgreen = ModuleEigengeneNetwork2$MEgreen, simulateProportions = simulateProportions1,
+  nGenes = nGenes1
+)
+# recall that this is the signed gene significance in the training data
+GS1 <- as.numeric(cor(y, datExpr, use = "p"))
+# the following is the signed gene significance in the test data
+GS2 <- as.numeric(cor(ModuleEigengeneNetwork2$y, dat2$datExpr, use = "p"))
+```
+
+```{r}
+sizeGrWindow(8, 6)
+par(mfrow = c(1, 1))
+verboseScatterplot(GS1, GS2,
+  main = "Trait-based gene significance in test set vs. training set\n",
+  xlab = "Training set gene significance",
+  ylab = "Test set gene significance",
+  col = truemodule, cex.main = 1.4
+)
+```
+
+```{r}
+EvaluationGeneScreening1 <- corPredictionSuccess(
+  corPrediction = CorPrediction1,
+  corTestSet = GS2,
+  topNumber = seq(from = 20, to = 500, length = 30)
+)
+par(mfrow = c(2, 2))
+listcomp <- EvaluationGeneScreening1$meancorTestSetOverall
+matplot(
+  x = listcomp$topNumber,
+  y = listcomp[, -1],
+  main = "Predicting positive and negative correlations",
+  ylab = "mean cor, test data",
+  xlab = "top number of genes in the training data"
+)
+listcomp <- EvaluationGeneScreening1$meancorTestSetPositive
+matplot(
+  x = listcomp$topNumber,
+  y = listcomp[, -1],
+  main = "Predicting positive correlations",
+  ylab = "mean cor, test data",
+  xlab = "top number of genes in the training data"
+)
+listcomp <- EvaluationGeneScreening1$meancorTestSetNegative
+matplot(
+  x = listcomp$topNumber,
+  y = listcomp[, -1],
+  main = "Predicting negative correlations",
+  ylab = "mean cor, test data",
+  xlab = "top number of genes in the training data"
+)
+```
+
+```{r}
+relativeCorPredictionSuccess(
+  corPredictionNew = NS1$cor.Weighted,
+  corPredictionStandard = GS1,
+  corTestSet = GS2,
+  topNumber = c(10, 20, 50, 100, 200, 500)
+)
+```
+
+```{r}
+# Create a data frame holding the results of gene screening
+GeneResultsNetworkScreening <- data.frame(GeneName = row.names(NS1), NS1)
+# Write the data frame into a file
+write.table(GeneResultsNetworkScreening,
+  file = "GeneResultsNetworkScreening.csv",
+  row.names = F, sep = ","
+)
+# Output of eigengene information:
+datMEy <- data.frame(y, datME)
+eigengeneSignificance <- cor(datMEy, y)
+eigengeneSignificance[1, 1] <- (1 + max(eigengeneSignificance[-1, 1])) / 2
+eigengeneSignificance.pvalue <- corPvalueStudent(eigengeneSignificance, nSamples = length(y))
+namesME <- names(datMEy)
+# Form a summary data frame
+out1 <- data.frame(t(data.frame(
+  eigengeneSignificance,
+  eigengeneSignificance.pvalue, namesME, t(datMEy)
+)))
+# Set appropriate row names
+dimnames(out1)[[1]][1] <- "EigengeneSignificance"
+dimnames(out1)[[1]][2] <- "EigengeneSignificancePvalue"
+dimnames(out1)[[1]][3] <- "ModuleEigengeneName"
+dimnames(out1)[[1]][-c(1:3)] <- dimnames(datExpr)[[1]]
+# Write the data frame into a file
+write.table(out1, file = "MEResultsNetworkScreening.csv", row.names = TRUE, col.names = TRUE, sep = ",")
+# Display the first few rows:
+head(out1)
+```
+
+```{r}
+# Write out gene information
+GeneName <- dimnames(datExpr)[[2]]
+GeneSummary <- data.frame(GeneName, truemodule, SignalGeneIndicator, NS1)
+write.table(GeneSummary, file = "GeneSummaryTutorial.csv", row.names = F, sep = ",")
+# here we output the module eigengenes and trait y without eigengene significances
+datTraits <- data.frame(ArrayName, datMEy)
+dimnames(datTraits)[[2]][2:length(namesME)] <- paste("Trait",
+  dimnames(datTraits)[[2]][2:length(namesME)],
+  sep = "."
+)
+write.table(datTraits, file = "TraitsTutorial.csv", row.names = F, sep = ",")
+# here we output the simulated gene expression data
+MicroarrayData <- data.frame(GeneName, t(datExpr))
+names(MicroarrayData)[-1] <- ArrayName
+write.table(MicroarrayData, file = "MicroarrayDataTutorial.csv", row.names = F, sep = ",")
+```
+
+```{r}
+# Perform network screening
+NS1GS <- networkScreeningGS(datExpr = datExpr, datME = datME, GS = GS1)
+# Organize its results for easier plotting
+GSprediction1 <- data.frame(GS1, NS1GS$GS.Weighted)
+GS.Weighted <- NS1GS$GS.Weighted
+# Plot a comparison between standard gene significance and network-weighted gene significance
+sizeGrWindow(8, 6)
+par(mfrow = c(1, 1))
+verboseScatterplot(GS1, GS.Weighted,
+  main = "Weighted gene significance vs. the standard GS\n",
+  col = truemodule
+)
+abline(0, 1)
+```
+
+```{r}
+EvaluationGeneScreeningGS <- corPredictionSuccess(
+  corPrediction = GSprediction1, corTestSet = GS2,
+  topNumber = seq(from = 20, to = 500, length = 30)
+)
+sizeGrWindow(8, 6)
+par(mfrow = c(2, 2))
+listcomp <- EvaluationGeneScreeningGS$meancorTestSetOverall
+matplot(
+  x = listcomp$topNumber,
+  y = listcomp[, -1],
+  main = "Predicting positive and negative correlations",
+  ylab = "mean cor, test data",
+  xlab = "top number of genes in the training data"
+)
+listcomp <- EvaluationGeneScreeningGS$meancorTestSetPositive
+matplot(
+  x = listcomp$topNumber,
+  y = listcomp[, -1],
+  main = "Predicting positive correlations",
+  ylab = "mean cor, test data",
+  xlab = "top number of genes in the training data"
+)
+listcomp <- EvaluationGeneScreeningGS$meancorTestSetNegative
+matplot(
+  x = listcomp$topNumber,
+  y = listcomp[, -1],
+  main = "Predicting negative correlations",
+  ylab = "mean cor, test data",
+  xlab = "top number of genes in the training data"
+)
+```
+
+#8
+
+```{r}
+cmd1 <- cmdscale(as.dist(dissTOM), 2)
+sizeGrWindow(7, 6)
+par(mfrow = c(1, 1))
+plot(cmd1,
+  col = as.character(colorh1), main = "MDS plot",
+  xlab = "Scaling Dimension 1", ylab = "Scaling Dimension 2"
+)
+```
+
+```{r}
+power <- 6
+color1 <- colorDynamicTOM
+restGenes <- (color1 != "grey")
+diss1 <- 1 - TOMsimilarityFromExpr(datExpr[, restGenes], power = 6)
+hier1 <- hclust(as.dist(diss1), method = "average")
+diag(diss1) <- NA
+sizeGrWindow(7, 7)
+TOMplot(diss1^4, hier1, as.character(color1[restGenes]),
+  main = "TOM heatmap plot, module genes"
+)
+```
+
+```{r}
+power <- 6
+color1 <- colorDynamicTOM
+restGenes <- (color1 != "grey")
+diss1 <- 1 - adjacency(datExpr[, restGenes], power = 6)
+hier1 <- hclust(as.dist(diss1), method = "average")
+diag(diss1) <- NA
+sizeGrWindow(7, 7)
+TOMplot(diss1^4, hier1, as.character(color1[restGenes]),
+  main = "Adjacency heatmap plot, module genes"
+)
+```
+
+```{r}
+sizeGrWindow(7, 7)
+topList <- rank(NS1$p.Weighted, ties.method = "first") <= 30
+gene.names <- names(datExpr)[topList]
+# The following shows the correlations between the top genes
+plotNetworkHeatmap(datExpr,
+  plotGenes = gene.names,
+  networkType = "signed", useTOM = FALSE,
+  power = 1, main = "signed correlations"
+)
+```
+
+```{r}
+sizeGrWindow(7, 7)
+# The following shows the correlations between the top genes
+plotNetworkHeatmap(datExpr,
+  plotGenes = gene.names,
+  networkType = "unsigned", useTOM = FALSE,
+  power = 1, main = "signed correlations"
+)
+```
+
+```{r}
+sizeGrWindow(7, 7)
+# The following shows the TOM heatmap in a signed network
+plotNetworkHeatmap(datExpr,
+  plotGenes = gene.names,
+  networkType = "signed", useTOM = TRUE,
+  power = 12, main = "C. TOM in a signed network"
+)
+# The following shows the TOM heatmap in a unsigned network
+plotNetworkHeatmap(datExpr,
+  plotGenes = gene.names,
+  networkType = "unsigned", useTOM = TRUE,
+  power = 6, main = "D. TOM in an unsigned network"
+)
+```
