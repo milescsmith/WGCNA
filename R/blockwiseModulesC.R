@@ -23,12 +23,12 @@
 #
 # ==========================================================================================================
 
-TOMsimilarityFromExpr <- function(datExpr, 
+TOMsimilarityFromExpr <- function(datExpr,
                                   weights = NULL,
-                                  corType = "pearson", 
+                                  corType = "pearson",
                                   networkType = "unsigned",
-                                  power = 6, 
-                                  TOMType = "signed", 
+                                  power = 6,
+                                  TOMType = "signed",
                                   TOMDenom = "min",
                                   maxPOutliers = 1,
                                   quickCor = 0,
@@ -38,9 +38,8 @@ TOMsimilarityFromExpr <- function(datExpr,
                                   suppressTOMForZeroAdjacencies = FALSE,
                                   useInternalMatrixAlgebra = FALSE,
                                   nThreads = 0,
-                                  verbose = 1, 
+                                  verbose = 1,
                                   indent = 0) {
-  
   corTypeC <- as.integer(pmatch(corType, .corTypes) - 1)
   if (is.na(corTypeC)) {
     stop(glue("Invalid 'corType'. Recognized values are {.corTypes}"))
@@ -164,14 +163,14 @@ TOMsimilarity <- function(adjMat, TOMType = "unsigned", TOMDenom = "min",
 #' @param indent PARAM_DESCRIPTION, Default: 0
 #' @return OUTPUT_DESCRIPTION
 #' @details DETAILS
-#' @examples 
+#' @examples
 #' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
+#' if (interactive()) {
+#'   # EXAMPLE1
 #' }
-#' @rdname TOMdist <- function(adjMat, TOMType = unsigned, TOMDenom = min, 
-#' @export 
+#' }
+#' @rdname TOMdist <- function(adjMat, TOMType = unsigned, TOMDenom = min,
+#' @export
 
 TOMdist <- function(adjMat, TOMType = unsigned, TOMDenom = min,
                     suppressTOMForZeroAdjacencies = FALSE, useInternalMatrixAlgebra = FALSE, verbose = 1, indent = 0) {
@@ -184,71 +183,71 @@ TOMdist <- function(adjMat, TOMType = unsigned, TOMDenom = min,
 
 #' @description Function to calculate modules and eigengenes from all genes.
 #'
-#' @param datExpr 
-#' @param weights 
-#' @param checkMissingData 
-#' @param blocks 
-#' @param maxBlockSize 
-#' @param blockSizePenaltyPower 
-#' @param nPreclusteringCenters 
-#' @param randomSeed 
-#' @param loadTOM 
-#' @param corType 
-#' @param maxPOutliers 
-#' @param quickCor 
-#' @param pearsonFallback 
-#' @param cosineCorrelation 
-#' @param power 
-#' @param networkType 
-#' @param replaceMissingAdjacencies 
-#' @param suppressTOMForZeroAdjacencies 
-#' @param TOMType 
-#' @param TOMDenom 
-#' @param getTOMs 
-#' @param saveTOMs 
-#' @param saveTOMFileBase 
-#' @param deepSplit 
-#' @param detectCutHeight 
-#' @param minModuleSize 
-#' @param maxCoreScatter 
-#' @param minGap 
-#' @param maxAbsCoreScatter 
-#' @param minAbsGap 
-#' @param minSplitHeight 
-#' @param minAbsSplitHeight 
-#' @param useBranchEigennodeDissim 
-#' @param minBranchEigennodeDissim 
-#' @param stabilityLabels 
-#' @param stabilityCriterion 
-#' @param minStabilityDissim 
-#' @param pamStage 
-#' @param pamRespectsDendro 
-#' @param reassignThreshold 
-#' @param minCoreKME 
-#' @param minCoreKMESize 
-#' @param minKMEtoStay 
-#' @param mergeCutHeight 
-#' @param impute 
-#' @param trapErrors 
-#' @param numericLabels 
-#' @param nThreads 
-#' @param useInternalMatrixAlgebra 
-#' @param useCorOptionsThroughout 
-#' @param verbose 
-#' @param indent 
-#' @param ... 
+#' @param datExpr
+#' @param weights
+#' @param checkMissingData
+#' @param blocks
+#' @param maxBlockSize
+#' @param blockSizePenaltyPower
+#' @param nPreclusteringCenters
+#' @param randomSeed
+#' @param loadTOM
+#' @param corType
+#' @param maxPOutliers
+#' @param quickCor
+#' @param pearsonFallback
+#' @param cosineCorrelation
+#' @param power
+#' @param networkType
+#' @param replaceMissingAdjacencies
+#' @param suppressTOMForZeroAdjacencies
+#' @param TOMType
+#' @param TOMDenom
+#' @param getTOMs
+#' @param saveTOMs
+#' @param saveTOMFileBase
+#' @param deepSplit
+#' @param detectCutHeight
+#' @param minModuleSize
+#' @param maxCoreScatter
+#' @param minGap
+#' @param maxAbsCoreScatter
+#' @param minAbsGap
+#' @param minSplitHeight
+#' @param minAbsSplitHeight
+#' @param useBranchEigennodeDissim
+#' @param minBranchEigennodeDissim
+#' @param stabilityLabels
+#' @param stabilityCriterion
+#' @param minStabilityDissim
+#' @param pamStage
+#' @param pamRespectsDendro
+#' @param reassignThreshold
+#' @param minCoreKME
+#' @param minCoreKMESize
+#' @param minKMEtoStay
+#' @param mergeCutHeight
+#' @param impute
+#' @param trapErrors
+#' @param numericLabels
+#' @param nThreads
+#' @param useInternalMatrixAlgebra
+#' @param useCorOptionsThroughout
+#' @param verbose
+#' @param indent
+#' @param ...
 #'
 #' @return
-#' @examples 
+#' @examples
 #' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
+#' if (interactive()) {
+#'   # EXAMPLE1
 #' }
-#' @seealso 
+#' }
+#' @seealso
 #'  \code{\link[fastcluster]{hclust}}
 #' @rdname WGCNA::blockwiseModules
-#' @export 
+#' @export
 #' @importFrom fastcluster hclust
 #' @importFrom glue glue
 blockwiseModules <- function(
@@ -501,7 +500,7 @@ blockwiseModules <- function(
         nConsideredPCs = 3, signed = signed, getDetails = FALSE
       )
       externalSplitFncNeedsDistance[nExternalBranchSplitFnc] <- FALSE
-      minExternalSplit[ nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
+      minExternalSplit[nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
     }
   }
 
@@ -553,7 +552,7 @@ blockwiseModules <- function(
   blockGenes <- list()
 
   maxUsedLabel <- 0
-  for (blockNo in 1:nBlocks){
+  for (blockNo in 1:nBlocks) {
     if (verbose > 1) {
       message(glue("  ..Working on block {blockNo}."))
     }
@@ -597,9 +596,9 @@ blockwiseModules <- function(
 
       warn <- as.integer(0)
       tom <- .Call("tomSimilarity_call", selExpr, weights,
-        as.integer(CcorType), 
-        as.integer(CnetworkType), 
-        as.double(power), 
+        as.integer(CcorType),
+        as.integer(CnetworkType),
+        as.double(power),
         as.integer(CTOMType),
         as.integer(TOMDenomC),
         as.double(maxPOutliers),
@@ -637,8 +636,9 @@ blockwiseModules <- function(
     if (verbose > 2) message("  ....detecting modules..")
     datExpr.scaled.imputed.block <- datExpr.scaled.imputed[, block]
     if (nExternalBranchSplitFnc > 0) {
-      for (extBSFnc in 1:nExternalBranchSplitFnc)
+      for (extBSFnc in 1:nExternalBranchSplitFnc) {
         externalSplitOptions[[extBSFnc]]$expr <- datExpr.scaled.imputed.block
+      }
     }
 
     gc()
@@ -730,23 +730,30 @@ blockwiseModules <- function(
     for (mod in 1:ncol(propMEs))
     {
       modGenes <- (blockLabels == blockLabelIndex[mod])
-      KME <- do.call(corFnc,
-                     c(list(selExpr[, modGenes], 
-                            propMEs[, mod]),
-                       if (corFncAcceptsWeights) {
-                         list(weights.x = if (haveWeights) {
-                           weights[, modGenes] }
-                           else {
-                             NULL
-                             },
-                           weights.y = NULL)
-                         } else {
-                           NULL
-                           },
-                       corOptions
-                       )
-                     )
-      if (intNetworkType == 1){
+      KME <- do.call(
+        corFnc,
+        c(
+          list(
+            selExpr[, modGenes],
+            propMEs[, mod]
+          ),
+          if (corFncAcceptsWeights) {
+            list(
+              weights.x = if (haveWeights) {
+                weights[, modGenes]
+              }
+              else {
+                NULL
+              },
+              weights.y = NULL
+            )
+          } else {
+            NULL
+          },
+          corOptions
+        )
+      )
+      if (intNetworkType == 1) {
         KME <- abs(KME)
       }
       if (sum(KME > minCoreKME) < minCoreKMESize) {
@@ -959,17 +966,17 @@ blockwiseModules <- function(
 
 .orderLabelsBySize <- function(labels, exclude = NULL) {
   levels.0 <- sort(unique(labels))
-  levels <- levels.0[ !levels.0 %in% exclude]
+  levels <- levels.0[!levels.0 %in% exclude]
   levels.excl <- levels.0 [levels.0 %in% exclude]
   rearrange <- labels %in% levels
-  tab <- table(labels [ rearrange ])
+  tab <- table(labels [rearrange])
   rank <- rank(-tab, ties.method = "first")
 
   oldOrder <- c(levels.excl, names(tab))
   newOrder <- c(levels.excl, names(tab)[rank])
   if (is.numeric(labels)) newOrder <- as.numeric(newOrder)
 
-  newOrder[ match(labels, oldOrder) ]
+  newOrder[match(labels, oldOrder)]
 }
 
 # ======================================================================================================
@@ -1089,8 +1096,8 @@ recutBlockwiseTrees <- function(datExpr,
         discardProp = 0.08, minCentralProp = 0.75,
         nConsideredPCs = 3, signed = signed, getDetails = FALSE
       )
-      minExternalSplit[ nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
-      externalSplitFncNeedsDistance[ nExternalBranchSplitFnc] <- FALSE
+      minExternalSplit[nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
+      externalSplitFncNeedsDistance[nExternalBranchSplitFnc] <- FALSE
     }
   }
 
@@ -1130,8 +1137,9 @@ recutBlockwiseTrees <- function(datExpr,
 
     datExpr.scaled.imputed.block <- datExpr.scaled.imputed[, block]
     if (nExternalBranchSplitFnc > 0) {
-      for (extBSFnc in 1:nExternalBranchSplitFnc)
+      for (extBSFnc in 1:nExternalBranchSplitFnc) {
         externalSplitOptions[[extBSFnc]]$expr <- datExpr.scaled.imputed.block
+      }
     }
 
     blockLabels <- try(cutreeDynamic(
@@ -1442,8 +1450,9 @@ recutBlockwiseTrees <- function(datExpr,
   nTags <- length(tags)
   if (length(replacements) != nTags) stop("Length of tags and replacements must be the same.")
 
-  for (t in 1:nTags)
+  for (t in 1:nTags) {
     format <- gsub(as.character(tags[t]), as.character(replacements[t]), format, fixed = TRUE)
+  }
 
   format
 }
@@ -1640,8 +1649,11 @@ blockwiseIndividualTOMs <- function(
   actualFileNames <- NULL
   if (saveTOMs) {
     actualFileNames <- matrix("", nSets, nBlocks)
-    for (set in 1:nSets) for (b in 1:nBlocks)
+    for (set in 1:nSets) {
+      for (b in 1:nBlocks) {
         actualFileNames[set, b] <- .processFileName(individualTOMFileNames, set, names(multiExpr), b)
+      }
+    }
 
     rownames(actualFileNames) <- spaste("Set.", c(1:nSets))
     colnames(actualFileNames) <- spaste("Block.", c(1:nBlocks))
@@ -2102,7 +2114,7 @@ blockwiseConsensusModules <- function(
 
   nGGenes <- sum(gsg$goodGenes)
   nGSamples <- rep(0, nSets)
-  for (set in 1:nSets) nGSamples[set] <- sum(gsg$goodSamples[[ set ]])
+  for (set in 1:nSets) nGSamples[set] <- sum(gsg$goodSamples[[set]])
 
   blocks <- individualTOMInfo$blocks
   gBlocks <- individualTOMInfo$gBlocks
@@ -2426,16 +2438,18 @@ blockwiseConsensusModules <- function(
 
     # Update module eigengenes
 
-    for (set in 1:nSets)
+    for (set in 1:nSets) {
       if (is.null(dim(blockConsMEs[[set]]$data))) {
         dim(blockConsMEs[[set]]$data) <- c(length(blockConsMEs[[set]]$data), 1)
       }
+    }
 
     if (is.null(consMEs[[1]])) {
       for (set in 1:nSets) consMEs[[set]] <- list(data = blockConsMEs[[set]]$data)
     } else {
-      for (set in 1:nSets)
+      for (set in 1:nSets) {
         consMEs[[set]]$data <- cbind(consMEs[[set]]$data, blockConsMEs[[set]]$data)
+      }
     }
 
     # Update allLabels
@@ -2730,8 +2744,9 @@ recutConsensusTrees <- function(multiExpr,
   }
 
   if (!gsg$allOK) {
-    for (set in 1:nSets)
+    for (set in 1:nSets) {
       multiExpr[[set]]$data <- multiExpr[[set]]$data[gsg$goodSamples[[set]], gsg$goodGenes]
+    }
   }
 
   gBlocks <- blocks[gsg$goodGenes]
@@ -2775,8 +2790,9 @@ recutConsensusTrees <- function(multiExpr,
     block <- c(1:nGGenes)[gBlocks == blockLevels[blockNo]]
     nBlockGenes <- length(block)
     selExpr <- vector(mode = "list", length = nSets)
-    for (set in 1:nSets)
+    for (set in 1:nSets) {
       selExpr[[set]] <- list(data = multiExpr[[set]]$data[, block])
+    }
 
     # This is how TOMs are saved:
     # if (saveTOMs)
@@ -2985,16 +3001,18 @@ recutConsensusTrees <- function(multiExpr,
 
     # Update module eigengenes
 
-    for (set in 1:nSets)
+    for (set in 1:nSets) {
       if (is.null(dim(blockConsMEs[[set]]$data))) {
         dim(blockConsMEs[[set]]$data) <- c(length(blockConsMEs[[set]]$data), 1)
       }
+    }
 
     if (is.null(consMEs[[1]])) {
       for (set in 1:nSets) consMEs[[set]] <- list(data = blockConsMEs[[set]]$data)
     } else {
-      for (set in 1:nSets)
+      for (set in 1:nSets) {
         consMEs[[set]]$data <- cbind(consMEs[[set]]$data, blockConsMEs[[set]]$data)
+      }
     }
 
     # Update allLabels
@@ -3183,7 +3201,7 @@ projectiveKMeans <- function(
                              maxIterations = 1000,
                              verbose = 0, indent = 0) {
   centerGeneDist <- function(centers, oldDst = NULL, changed = c(1:nCenters),
-                               blockSize = 50000, verbose = 0, spaces = "") {
+                             blockSize = 50000, verbose = 0, spaces = "") {
     if (is.null(oldDst)) {
       oldDst <- array(0, c(nCenters, nGenes))
       changed <- c(1:nCenters)
@@ -3201,9 +3219,9 @@ projectiveKMeans <- function(
     for (b in 1:nBlocks)
     {
       if (intNetworkType == 1) {
-        dst <- 1 - abs(cor(centers[, changed], datExpr[, blocks[[b]] ]))
+        dst <- 1 - abs(cor(centers[, changed], datExpr[, blocks[[b]]]))
       } else {
-        dst <- 1 - cor(centers[, changed], datExpr[, blocks[[b]] ])
+        dst <- 1 - cor(centers[, changed], datExpr[, blocks[[b]]])
       }
       dstAll[changed, blocks[[b]]] <- dst
       if (verbose > 5) pind <- updateProgInd(b / nBlocks, pind)
@@ -3231,13 +3249,15 @@ projectiveKMeans <- function(
         sizeCorrections <- rep(1, length(sizes))
         sizeCorrections[sizes > preferredSize] <- Inf
       }
-      for (cen in changed) if (sizes[cen] != 0) {
+      for (cen in changed) {
+        if (sizes[cen] != 0) {
           if (is.finite(sizeCorrections[cen])) {
             centerDist[membership == cen] <- dst[cen, membership == cen] * sizeCorrections[cen]
           } else {
             centerDist[membership == cen] <- 10 + dst[cen, membership == cen]
           }
         }
+      }
     }
     centerDist
   }
@@ -3507,12 +3527,13 @@ consensusProjectiveKMeans <- function(
     nChanged <- length(changed)
     if (nChanged != 0) {
       dstX <- array(0, c(nSets, nChanged, nGenes))
-      for (set in 1:nSets)
+      for (set in 1:nSets) {
         if (intNetworkType == 1) {
           dstX[set, , ] <- 1 - abs(cor(centers[[set]]$data[, changed], multiExpr[[set]]$data))
         } else {
           dstX[set, , ] <- 1 - cor(centers[[set]]$data[, changed], multiExpr[[set]]$data)
         }
+      }
       dst <- array(0, c(nChanged, nGenes))
       if (useMean) {
         dstAll[changed, ] <- base::colMeans(dstX, dims = 1)
@@ -3543,13 +3564,15 @@ consensusProjectiveKMeans <- function(
         sizeCorrections <- rep(1, length(sizes))
         sizeCorrections[sizes > preferredSize] <- Inf
       }
-      for (cen in changed) if (sizes[cen] != 0) {
+      for (cen in changed) {
+        if (sizes[cen] != 0) {
           if (is.finite(sizeCorrections[cen])) {
             centerDist[membership == cen] <- dst[cen, membership == cen] * sizeCorrections[cen]
           } else {
             centerDist[membership == cen] <- 10 + dst[cen, membership == cen]
           }
         }
+      }
     }
     centerDist
   }
@@ -3598,8 +3621,9 @@ consensusProjectiveKMeans <- function(
     ))
   }
 
-  for (set in 1:nSets)
+  for (set in 1:nSets) {
     multiExpr[[set]]$data <- scale(as.matrix(multiExpr[[set]]$data))
+  }
 
   # Check data for genes and samples that have too many missing values
   if (checkData) {
@@ -3626,8 +3650,9 @@ consensusProjectiveKMeans <- function(
       spaces, "Found missing data. These will be replaced by zeros;\n",
       spaces, "  for a better replacement, use 'imputeMissing=TRUE'."
     ))
-    for (set in 1:nSets)
+    for (set in 1:nSets) {
       multiExpr[[set]]$data[is.na(multiExpr[[set]]$data)] <- 0
+    }
   }
 
   setSize <- checkSets(multiExpr)
@@ -3635,8 +3660,9 @@ consensusProjectiveKMeans <- function(
   nSamples <- setSize$nSamples
 
   centers <- vector(mode = "list", length = nSets)
-  for (set in 1:nSets)
+  for (set in 1:nSets) {
     centers[[set]] <- list(data = matrix(0, nSamples[set], nCenters))
+  }
 
   randGeneIndex <- sample(nGenes, size = nGenes)
   temp <- rep(c(1:nCenters), times = ceiling(nGenes / nCenters))
@@ -3654,10 +3680,13 @@ consensusProjectiveKMeans <- function(
     iteration <- iteration + 1
     if (verbose > 1) message(paste(spaces, " ..iteration", iteration))
     clusterSizes <- table(membership)
-    for (set in 1:nSets) for (cen in changed)
+    for (set in 1:nSets) {
+      for (cen in changed) {
         centers[[set]]$data[, cen] <- .alignedFirstPC(multiExpr[[set]]$data[, membership == cen],
           verbose = verbose - 2, indent = indent + 2
         )
+      }
+    }
     dst <- centerGeneDist(centers, dst, changed)
     centerDist <- memberCenterDist(dst, membership, clusterSizes, changed, centerDist)
 
@@ -3689,8 +3718,9 @@ consensusProjectiveKMeans <- function(
       if (accepted) {
         propSizes <- table(proposedMemb)
         keep <- as.numeric(names(propSizes))
-        for (set in 1:nSets)
+        for (set in 1:nSets) {
           centers[[set]]$data <- centers[[set]]$data[, keep]
+        }
         dst <- dst[keep, ]
         changedAll <- union(membership[moved], proposedMemb[moved])
         changedKeep <- changedAll[is.finite(match(changedAll, keep))]
@@ -3761,12 +3791,14 @@ consensusProjectiveKMeans <- function(
       # if (verbose > 1)
       #  message(paste(spaces, "  ..merged clusters", whichI, "and", whichJ,
       #             "whose combined size is", clusterSizes[whichI]));
-      for (set in 1:nSets)
+      for (set in 1:nSets) {
         centers[[set]]$data[, whichI] <- .alignedFirstPC(multiExpr[[set]]$data[, membership == whichI],
           verbose = verbose - 2, indent = indent + 2
         )
-      for (set in 1:nSets)
+      }
+      for (set in 1:nSets) {
         centers[[set]]$data <- centers[[set]]$data[, -whichJ]
+      }
       membership[membership > whichJ] <- membership[membership > whichJ] - 1
       nCenters <- nCenters - 1
       clusterSizes <- as.vector(table(membership))
