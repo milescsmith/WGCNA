@@ -102,7 +102,7 @@ matchLabels <- function(source, reference, pThreshold = 5e-2, na.rm = TRUE,
       unassdRank <- rank(-unassdSrcTab, ties.method = "first")
 
       nExtra <- sum(is.na(newLabels))
-      newLabels[is.na(newLabels)] <- extraLabels[ !extraLabels %in%
+      newLabels[is.na(newLabels)] <- extraLabels[!extraLabels %in%
         c(refMods, ignoreLabels, names(newLabels))] [1:nExtra]
     }
 

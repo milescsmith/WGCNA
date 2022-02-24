@@ -119,7 +119,7 @@ mtd.colnames <- function(multiData) {
         mdaUpdateIndex,
         if (nSets.existing < nSets) c((nSets.existing + 1):nSets) else NULL
       )))
-      calculate[ c(1:nSets)[-calculateIndex] ] <- FALSE
+      calculate[c(1:nSets)[-calculateIndex]] <- FALSE
     }
   }
 

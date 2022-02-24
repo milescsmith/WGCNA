@@ -270,8 +270,8 @@ branchSplit <- function(expr, branch1, branch2, discardProp = 0.05, minCentralPr
       # Reference level: 75th percentile of the central region of the smaller branch
       # refLevel1 = quantile(h[[1]]$counts [ central[[1]] ], prob = 0.75);
       # refLevel2 = quantile(h[[2]]$counts [ central[[2]] ], prob = 0.75)
-      refLevel1 <- mean(h[[1]]$counts [ central[[1]] ], na.rm = TRUE)
-      refLevel2 <- mean(h[[2]]$counts [ central[[2]] ], na.rm = TRUE)
+      refLevel1 <- mean(h[[1]]$counts [central[[1]]], na.rm = TRUE)
+      refLevel2 <- mean(h[[2]]$counts [central[[2]]], na.rm = TRUE)
       peakRefLevel <- min(refLevel1, refLevel2)
 
       middleCounts <- h[[left]]$counts[middle] + h[[right]]$counts[middle]
@@ -344,8 +344,8 @@ branchSplit.dissim <- function(dissimMat, branch1, branch2, upperP,
   )
 
   selectedDissim <- list(
-    list(data = dissimMat[branch1, branch1[betweenQuantiles[[1]]$data] ]),
-    list(data = dissimMat[branch2, branch1[ betweenQuantiles[[1]]$data] ]),
+    list(data = dissimMat[branch1, branch1[betweenQuantiles[[1]]$data]]),
+    list(data = dissimMat[branch2, branch1[betweenQuantiles[[1]]$data]]),
     list(data = dissimMat[branch2, branch2[betweenQuantiles[[2]]$data]]),
     list(data = dissimMat[branch1, branch2[betweenQuantiles[[2]]$data]])
   )
@@ -355,13 +355,13 @@ branchSplit.dissim <- function(dissimMat, branch1, branch2, upperP,
   # indexMat = cbind((1:n1)[betweenQuantiles[[1]]$data], 1:m1);
 
   # Remove the points nearest to branch 2 from the distances in branch 1
-  selectedDissim[[1]]$data[ betweenQuantiles[[1]]$data, ] <- NA
+  selectedDissim[[1]]$data[betweenQuantiles[[1]]$data, ] <- NA
 
   # n2 = length(branch2);
   # m2 = sum(betweenQuantiles[[2]]$data);
   # indexMat = cbind((1:n2)[betweenQuantiles[[2]]$data], 1:m2);
 
-  selectedDissim[[3]]$data[ betweenQuantiles[[2]]$data, ] <- NA
+  selectedDissim[[3]]$data[betweenQuantiles[[2]]$data, ] <- NA
 
   multiP.ext <- cbind(multiP, multiP[, c(2, 1)])
 

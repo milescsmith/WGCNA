@@ -1,5 +1,5 @@
 .devianceResidual <- function(y) {
-  event <- y[, ncol(y) ]
+  event <- y[, ncol(y)]
   fit <- summary(coxph(y ~ 1, na.action = na.exclude))
   CumHazard <- predict(fit, type = "expected")
   martingale1 <- event - CumHazard
@@ -172,7 +172,7 @@ votingLinearPredictor <- function(x, y, xtest = NULL,
       xCVtrain <- x[-samples, , drop = FALSE]
       xCVtest <- x[samples, , drop = FALSE]
       yCVtrain <- y[-samples, , drop = FALSE]
-      yCVtest <- y[samples, , drop = FALSE ]
+      yCVtest <- y[samples, , drop = FALSE]
       pr <- votingLinearPredictor(xCVtrain, yCVtrain, xCVtest,
         classify = FALSE,
         CVfold = 0,
@@ -273,7 +273,7 @@ votingLinearPredictor <- function(x, y, xtest = NULL,
     rank <- apply(r, 2, rank, na.last = TRUE)
     nFinite <- colSums(!is.na(r))
     for (t in 1:nTraits) {
-      r[ rank[, t] > nFeatures.lo & rank[, t] <= nFinite[t] - nFeatures.hi, t] <- 0
+      r[rank[, t] > nFeatures.lo & rank[, t] <= nFinite[t] - nFeatures.hi, t] <- 0
     }
   }
   r[is.na(r)] <- 0

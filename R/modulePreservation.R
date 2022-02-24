@@ -1,6 +1,5 @@
 # module preservation for networks specified by adjacency matrices, not expression data.
 # this version can handle both expression and adjacency matrices.
-
 # =====================================================================================================
 #
 # p-value functions
@@ -266,7 +265,7 @@ modulePreservation <- function(
 
   if (is.null(testNetworks)) {
     testNetworks <- list()
-    for (ref in 1:nRefNets) testNetworks[[ref]] <- c(1:nNets)[ -referenceNetworks[ref] ]
+    for (ref in 1:nRefNets) testNetworks[[ref]] <- c(1:nNets)[-referenceNetworks[ref]]
   }
 
   # Check that testNetworks was specified correctly

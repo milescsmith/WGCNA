@@ -242,8 +242,8 @@ GOenrichmentAnalysis <- function(labels, entrezCodes,
           tcx <- rep("", maxLen)
           ind <- 1
           len <- length(te)
-          tex[ ind:len ] <- te
-          tcx[ ind:len ] <- tc
+          tex[ind:len] <- te
+          tcx[ind:len] <- tc
           ind <- len + 1
           o2go <- match(termOffspring, as.character(names(Go2eg)))
           o2go <- o2go[is.finite(o2go)]
@@ -366,7 +366,7 @@ GOenrichmentAnalysis <- function(labels, entrezCodes,
     dimnames(countsInTerm) <- list(labelLevels, names(Go2eg))
 
     bestPTerms <- list()
-    modSizes <- table(labels[ !(labels[, set] %in% leaveOutLabel), set])
+    modSizes <- table(labels[!(labels[, set] %in% leaveOutLabel), set])
 
     if (!is.null(pCut) || nBestP > 0) {
       printFlush(paste(spaces, "   ..putting together terms with highest enrichment significance.."))

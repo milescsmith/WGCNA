@@ -20,7 +20,6 @@ moduleColor.getMEprefix <- function() {
   .moduleColorOptions$MEprefix
 }
 
-
 #' @title moduleEigengenes
 #' @description finds the first principal component (eigengene) in each
 #' module defined by the colors of the input vector "colors".
@@ -602,7 +601,7 @@ hierarchicalConsensusMEDissimilarity <- function(MEs, networkOptions, consensusT
   }
 
   ranks <- round(colRanks(data, ties.method = "average", preserveShape = TRUE))
-  out <- refSample [ ranks ]
+  out <- refSample [ranks]
   dim(out) <- dim(data)
   dimnames(out) <- dimnames(data)
 
@@ -851,6 +850,7 @@ labels2colors <- function(labels, zeroIsGrey = TRUE, colorSeq = NULL, naColor = 
   } else {
     nRepeats <- 1
     extColorSeq <- colorSeq
+
   }
   colors <- rep("grey", length(nLabels))
   fin <- !is.na(nLabels)
@@ -1922,19 +1922,6 @@ pickHardThreshold <- function(data, dataIsExpr = TRUE, RsquaredCut = 0.85, cutVe
 } # end of function pickHardThreshold
 
 
-# ==============================================================================================
-#
-# pickSoftThreshold
-#
-# ===============================================================================================
-# The function pickSoftThreshold allows one to estimate the power parameter when using
-# a soft thresholding approach with the use of the power function AF(s)=s^Power
-# The removeFirst option removes the first point (k=1, P(k=1)) from the regression fit.
-# PL: a rewrite that splits the data into a few blocks.
-# SH: more netowkr concepts added.
-# PL: re-written for parallel processing
-# Alexey Sergushichev: speed up by pre-calculating correlation powers
-
 #' @title pickSoftThreshold
 #' @description The function pickSoftThreshold allows one to estimate the power
 #'  parameter when using a soft thresholding approach with the use of the power
@@ -2062,8 +2049,8 @@ pickSoftThreshold <- function(
     # precede the zero-length ones
     actualThreads <- which(sapply(jobs, length) > 0)
 
-    datk[ c(startG:endG), ] <- foreach(t = actualThreads, .combine = rbind) %dopar% {
-      useGenes <- c(startG:endG)[ jobs[[t]] ]
+    datk[c(startG:endG), ] <- foreach(t = actualThreads, .combine = rbind) %dopar% {
+      useGenes <- c(startG:endG)[jobs[[t]]]
       nGenes1 <- length(useGenes)
       if (dataIsExpr) {
         corOptions$y <- data[, useGenes]
@@ -2732,14 +2719,14 @@ plotOrderedColors <- function(
     for (tr in 1:nTextRows)
     {
       charHeight <- max(strheight(rowText[, tr], cex = cex.rowText))
-      width1 <- rowWidths[ physicalTextRow[tr] ]
+      width1 <- rowWidths[physicalTextRow[tr]]
       nCharFit <- floor(width1 / charHeight / 1.7 / par("lheight"))
       if (nCharFit < 1) stop("Rows are too narrow to fit text. Consider decreasing cex.rowText.")
       set <- textPositions[tr]
       # colLevs = sort(unique(colors[, set]));
       # textLevs[[tr]] = rowText[match(colLevs, colors[, set]), tr];
       textLevs[[tr]] <- sort(unique(rowText[, tr]))
-      textLevs[[tr]] <- textLevs[[tr]] [ !textLevs[[tr]] %in% rowTextIgnore ]
+      textLevs[[tr]] <- textLevs[[tr]] [!textLevs[[tr]] %in% rowTextIgnore]
       nLevs <- length(textLevs[[tr]])
       textPos[[tr]] <- rep(0, nLevs)
       orderedText <- rowText[order, tr]
@@ -2810,7 +2797,7 @@ plotOrderedColors <- function(
         for (l in 1:nt) lines(c(xt[l], xt[l]), c(yt[l], yTop[jIndex]), col = "darkgrey", lty = 3)
       }
 
-      textAdj <- c(0, 0.5, 1)[ match(rowTextAlignment, c("left", "center", "right")) ]
+      textAdj <- c(0, 0.5, 1)[match(rowTextAlignment, c("left", "center", "right"))]
       text(textLevs[[textRow]], x = xt, y = yt, adj = c(textAdj, 1), xpd = TRUE, cex = cex.rowText)
       # printFlush("ok");
     }
@@ -2928,7 +2915,7 @@ TOMplot <- function(dissim, dendro, Colors = NULL, ColorsLeft = Colors, terrainC
 plotNetworkHeatmap <- function(datExpr, plotGenes, weights = NULL, useTOM = TRUE, power = 6,
                                networkType = "unsigned", main = "Heatmap of the network") {
   match1 <- match(plotGenes, colnames(datExpr))
-  match1 <- match1[ !is.na(match1)]
+  match1 <- match1[!is.na(match1)]8
   nGenes <- length(match1)
   if (sum(!is.na(match1)) != length(plotGenes)) {
     printFlush(paste(
@@ -2944,7 +2931,7 @@ plotNetworkHeatmap <- function(datExpr, plotGenes, weights = NULL, useTOM = TRUE
     ))
     plot(1, 1)
   } else {
-    datErest <- datExpr[, match1 ]
+    datErest <- datExpr[, match1]
     if (!is.null(weights)) weights <- weights[, match1]
     ADJ1 <- adjacency(datErest, weights = weights, power = power, type = networkType)
     if (useTOM) {
@@ -4233,8 +4220,8 @@ relativeCorPredictionSuccess <- function(corPredictionNew, corPredictionStandard
     rankhighNew <- rank(-as.matrix(corPredictionNew)[, i], ties.method = "first")
     ranklowNew <- rank(as.matrix(corPredictionNew)[, i], ties.method = "first")
     for (j in c(1:length(topNumber))) {
-      highCorNew <- as.numeric(corTestSet[rankhighNew <= topNumber[j] ])
-      lowCorNew <- as.numeric(corTestSet[ranklowNew <= topNumber[j] ])
+      highCorNew <- as.numeric(corTestSet[rankhighNew <= topNumber[j]])
+      lowCorNew <- as.numeric(corTestSet[ranklowNew <= topNumber[j]])
       highCorStandard <- as.numeric(corTestSet[rank(-as.numeric(corPredictionStandard),
         ties.method = "first"
       ) <= topNumber[j]])
@@ -4955,6 +4942,8 @@ automaticNetworkScreening <- function(
   rr <- max(abs(ES), na.rm = TRUE)
   AAcriterion <- sqrt(length(y) - 2) * rr / sqrt(1 - rr^2)
 
+  ESy <- (1 + max(abs(ES), na.rm = TRUE)) / 2
+  ES <- data.frame(ES, ESy = ESy)
 
   ESy <- (1 + max(abs(ES), na.rm = TRUE)) / 2
   ES <- data.frame(ES, ESy = ESy)
@@ -5236,7 +5225,7 @@ networkScreening <- function(
 
     # weightESy
     ES.CorBatch[ES.CorBatch > .999] <- weightESy * 1 + (1 - weightESy) *
-      max(abs(ES.CorBatch[ES.CorBatch < .999 ]), na.rm = TRUE)
+      max(abs(ES.CorBatch[ES.CorBatch < .999]), na.rm = TRUE)
     # the following omits the diagonal when datME=datExpr
     if (nGenes == nMEs & removeDiag) {
       diag(datKMEBatch[index1, ]) <- 0
@@ -5719,7 +5708,7 @@ labeledHeatmap <- function(
     if (any(verticalSeparator.x < 0 | verticalSeparator.x > nCols)) {
       stop("If given. 'verticalSeparator.x' must all be between 0 and the number of columns.")
     }
-    shownVertSep <- verticalSeparator.x[ verticalSeparator.x %in% showCols.ext]
+    shownVertSep <- verticalSeparator.x[verticalSeparator.x %in% showCols.ext]
     verticalSeparator.x.show <- .restrictIndex(verticalSeparator.x, showCols.ext) - showCols.shift
     rowSepShowIndex <- match(shownVertSep, verticalSeparator.x)
   } else {
@@ -5770,7 +5759,7 @@ labeledHeatmap <- function(
     if (any(horizontalSeparator.y < 0 | horizontalSeparator.y > nRows)) {
       stop("If given. 'horizontalSeparator.y' must all be between 0 and the number of rows.")
     }
-    shownHorizSep <- horizontalSeparator.y[ horizontalSeparator.y %in% showRows.ext]
+    shownHorizSep <- horizontalSeparator.y[horizontalSeparator.y %in% showRows.ext]
     horizontalSeparator.y.show <- .restrictIndex(horizontalSeparator.y, showRows.ext) - showRows.shift
     rowSepShowIndex <- match(shownHorizSep, horizontalSeparator.y)
   } else {
@@ -6125,8 +6114,8 @@ blueWhiteRed <- function(n, gamma = 1, endSaturation = 1) {
   cols <- matrix(0, n, 3)
   for (c in 1:3)
   {
-    cols[ index1, c] <- blueEnd[c] + (middle[c] - blueEnd[c]) * frac1
-    cols[ index2, c] <- redEnd[c] + (middle[c] - redEnd[c]) * frac2
+    cols[index1, c] <- blueEnd[c] + (middle[c] - blueEnd[c]) * frac1
+    cols[index2, c] <- redEnd[c] + (middle[c] - redEnd[c]) * frac2
   }
 
   rgb(cols[, 1], cols[, 2], cols[, 3], maxColorValue = 1)
@@ -8018,7 +8007,7 @@ consensusKME <- function(multiExpr, moduleLabels, multiEigengenes = NULL, consen
     if (sum(keep) == 0) {
       stop("Incorrectly specified 'useModules': no such module(s).")
     }
-    moduleLabels [ !keep ] <- greyLabel
+    moduleLabels [!keep] <- greyLabel
   }
 
   if (is.null(multiEigengenes)) {
@@ -8106,7 +8095,7 @@ consensusKME <- function(multiExpr, moduleLabels, multiEigengenes = NULL, consen
   }
   kME.consensus <- ifelse(kME.median > 0, kME.consensus.1, kME.consensus.2)
 
-  kME.consensus[ kME.consensus * kME.median < 0 ] <- 0
+  kME.consensus[kME.consensus * kME.median < 0] <- 0
 
   # Prepare identifiers for the variables (genes)
   if (is.null(colnames(multiExpr[[1]]$data))) {
@@ -8265,7 +8254,7 @@ consensusKME <- function(multiExpr, moduleLabels, multiEigengenes = NULL, consen
     spaste("meta.Z.", weightNames, ".kME"),
     spaste("meta.p.", weightNames, ".kME"),
     spaste("meta.q.", weightNames, ".kME")
-  )[ c(
+  )[c(
     rep(TRUE, nWeights + 1), rep(haveZs, nWeights), rep(haveZs, nWeights),
     rep(haveZs && getQvalues, nWeights)
   )]
@@ -8345,7 +8334,7 @@ hierarchicalConsensusKME <- function(
     if (sum(keep) == 0) {
       stop("Incorrectly specified 'useModules': no such module(s).")
     }
-    moduleLabels [ !keep ] <- greyLabel
+    moduleLabels [!keep] <- greyLabel
   }
 
   if (!is.null(additionalGeneInfo)) {
@@ -8651,7 +8640,7 @@ hierarchicalConsensusKME <- function(
       "meta.FDR.",
       if (includeWeightTypeInColnames) spaste(weightNames, ".") else "", "kME"
     )
-  )[ c(
+  )[c(
     getConsensusKME, rep(getAverageKME, nWeights),
     rep(haveZs, nWeights),
     rep(haveZs && getMetaP, nWeights),
@@ -8901,7 +8890,7 @@ metaAnalysis <- function(multiExpr, multiTrait,
     NULL
   ) # The last NULL is necessary so the line below works even if nothing else is NULL
 
-  out <- as.data.frame(out[ -(which(sapply(out, is.null), arr.ind = TRUE))])
+  out <- as.data.frame(out[-(which(sapply(out, is.null), arr.ind = TRUE))])
 
   out
 }
@@ -9388,13 +9377,13 @@ binarizeCategoricalVariable <- function(
                                         includeLevelInformation = TRUE) {
   tab <- table(x)
   levels0 <- names(tab)
-  tab <- tab[ tab >= minCount & !(levels0 %in% ignore) ]
+  tab <- tab[tab >= minCount & !(levels0 %in% ignore)]
   levels <- names(tab)
   if (!is.null(levelOrder)) {
     order <- match(levelOrder, levels)
     order <- order[is.finite(order)]
     levels0 <- levels[order]
-    levels1 <- levels[ !levels %in% levels0]
+    levels1 <- levels[!levels %in% levels0]
     levels <- c(levels0, levels1)
   }
   nSamples <- length(x)
@@ -9428,10 +9417,10 @@ binarizeCategoricalVariable <- function(
     for (v1 in 1:(nLevels - 1)) {
       for (v2 in (v1 + 1):nLevels)
       {
-        out[ x == levels[v1], ind] <- val1
-        out[ x == levels[v2], ind] <- val2
+        out[x == levels[v1], ind] <- val1
+        out[x == levels[v2], ind] <- val2
         names[ind] <- spaste(namePrefix, levels[v2], levelSep.pairwise, levels[v1])
-        levelTable[, ind] <- levels[ c(v1, v2)]
+        levelTable[, ind] <- levels[c(v1, v2)]
         ind <- ind + 1
       }
     }
@@ -9439,7 +9428,7 @@ binarizeCategoricalVariable <- function(
   if (includeLevelVsAll) {
     for (v1 in (1 + as.numeric(dropFirstLevelVsAll)):nLevels)
     {
-      out[, ind] <- c(val1, val2) [ as.numeric(x == levels[v1]) + 1 ]
+      out[, ind] <- c(val1, val2) [as.numeric(x == levels[v1]) + 1]
       names[ind] <- spaste(namePrefix, levels[v1], levelSep.vsAll, nameForAll)
       levelTable[, ind] <- c(nameForAll, levels[v1])
       ind <- ind + 1

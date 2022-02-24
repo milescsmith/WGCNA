@@ -288,8 +288,8 @@ nearestCentroidPredictor <- function(
     indexSelect <- indexSelect[indexSelect > 0]
     select <- keepInd[order[indexSelect]]
   } else {
-    indexSelect <- (1:nKeep)[ featureSignificance[keep] >= assocCut.hi |
-      featureSignificance[keep] <= assocCut.lo ]
+    indexSelect <- (1:nKeep)[featureSignificance[keep] >= assocCut.hi |
+      featureSignificance[keep] <= assocCut.lo]
     if (length(indexSelect) < 2) {
       stop(paste(
         "'assocCut.hi'", assocCut.hi, "and assocCut.lo", assocCut.lo,
@@ -391,7 +391,7 @@ nearestCentroidPredictor <- function(
     for (cl in 1:nClusters)
     {
       l <- cluster2level[cl]
-      clusterSamples <- c(1:nSamples)[ y == l ] [ clusterLabels[[l]] == cl ]
+      clusterSamples <- c(1:nSamples)[y == l] [clusterLabels[[l]] == cl]
       if (centroidMethod == "mean") {
         centroidProfiles[, cl] <- apply(xSel[clusterSamples, , drop = FALSE],
           2, mean,

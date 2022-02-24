@@ -118,9 +118,9 @@ labelPoints <- function(x, y, labels, cex = 0.7, offs = 0.01, xpd = TRUE, jiggle
 
   overlapF <- function(x1min, x1max, x2min, x2max) {
     overlap <- matrix(0, nPts, nPts)
-    overlap[ x1max > x2min & x1max < x2max & x1min < x2min ] <- 1
-    overlap[ x1max > x2min & x1max < x2max & x1min > x2min ] <- 2
-    overlap[ x1max > x2max & x1min > x2min ] <- 3
+    overlap[x1max > x2min & x1max < x2max & x1min < x2min] <- 1
+    overlap[x1max > x2min & x1max < x2max & x1min > x2min] <- 2
+    overlap[x1max > x2max & x1min > x2min] <- 3
     overlap
   }
 

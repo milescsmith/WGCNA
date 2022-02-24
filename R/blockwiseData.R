@@ -65,7 +65,7 @@ newBlockwiseData <- function(data, external = FALSE, fileNames = NULL,
 
 mergeBlockwiseData <- function(...) {
   args <- list(...)
-  args <- args[ sapply(args, length) > 0]
+  args <- args[sapply(args, length) > 0]
   if (!all(sapply(args, inherits, "BlockwiseData"))) {
     stop("All arguments must be of class 'BlockwiseData'.")
   }

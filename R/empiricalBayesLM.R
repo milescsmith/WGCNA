@@ -44,7 +44,7 @@
 .initialFit.defaultWeightName <- function(fitFnc) {
   wNames <- c(rlm = "w", lmrob = "rweights")
   if (fitFnc %in% names(wNames)) {
-    return(wNames[ match(fitFnc, names(wNames))])
+    return(wNames[match(fitFnc, names(wNames))])
   }
   NULL
 }
@@ -55,7 +55,7 @@
     lmrob = list(model = FALSE, x = FALSE, y = FALSE, control = lmRob.control())
   )
   if (fitFnc %in% names(defOpt)) {
-    return(defOpt[[ match(fitFnc, names(defOpt))]])
+    return(defOpt[[match(fitFnc, names(defOpt))]])
   }
   list()
 }
@@ -63,7 +63,7 @@
 .initialFit.requiresFormula <- function(fitFnc) {
   reqForm <- c(rlm = FALSE, lmrob = TRUE)
   if (fitFnc %in% names(reqForm)) {
-    return(reqForm[ match(fitFnc, names(reqForm))])
+    return(reqForm[match(fitFnc, names(reqForm))])
   }
   FALSE
 }

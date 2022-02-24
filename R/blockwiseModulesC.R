@@ -168,7 +168,6 @@ TOMsimilarity <- function(adjMat, TOMType = "unsigned", TOMDenom = "min",
 #' if (interactive()) {
 #'   # EXAMPLE1
 #' }
-#' }
 #'
 #' @export
 
@@ -179,6 +178,7 @@ TOMdist <- function(adjMat,
                     useInternalMatrixAlgebra = FALSE,
                     verbose = 1,
                     indent = 0) {
+
   1 - TOMsimilarity(adjMat, TOMType, TOMDenom,
     suppressTOMForZeroAdjacencies = suppressTOMForZeroAdjacencies,
     useInternalMatrixAlgebra = useInternalMatrixAlgebra, verbose = verbose, indent = indent
@@ -505,7 +505,7 @@ blockwiseModules <- function(
         nConsideredPCs = 3, signed = signed, getDetails = FALSE
       )
       externalSplitFncNeedsDistance[nExternalBranchSplitFnc] <- FALSE
-      minExternalSplit[ nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
+      minExternalSplit[nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
     }
   }
 
@@ -971,17 +971,17 @@ blockwiseModules <- function(
 
 .orderLabelsBySize <- function(labels, exclude = NULL) {
   levels.0 <- sort(unique(labels))
-  levels <- levels.0[ !levels.0 %in% exclude]
+  levels <- levels.0[!levels.0 %in% exclude]
   levels.excl <- levels.0 [levels.0 %in% exclude]
   rearrange <- labels %in% levels
-  tab <- table(labels [ rearrange ])
+  tab <- table(labels [rearrange])
   rank <- rank(-tab, ties.method = "first")
 
   oldOrder <- c(levels.excl, names(tab))
   newOrder <- c(levels.excl, names(tab)[rank])
   if (is.numeric(labels)) newOrder <- as.numeric(newOrder)
 
-  newOrder[ match(labels, oldOrder) ]
+  newOrder[match(labels, oldOrder)]
 }
 
 # ======================================================================================================
@@ -1101,8 +1101,8 @@ recutBlockwiseTrees <- function(datExpr,
         discardProp = 0.08, minCentralProp = 0.75,
         nConsideredPCs = 3, signed = signed, getDetails = FALSE
       )
-      minExternalSplit[ nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
-      externalSplitFncNeedsDistance[ nExternalBranchSplitFnc] <- FALSE
+      minExternalSplit[nExternalBranchSplitFnc] <- otherArgs$minBranchSplit
+      externalSplitFncNeedsDistance[nExternalBranchSplitFnc] <- FALSE
     }
   }
 
@@ -2119,7 +2119,7 @@ blockwiseConsensusModules <- function(
 
   nGGenes <- sum(gsg$goodGenes)
   nGSamples <- rep(0, nSets)
-  for (set in 1:nSets) nGSamples[set] <- sum(gsg$goodSamples[[ set ]])
+  for (set in 1:nSets) nGSamples[set] <- sum(gsg$goodSamples[[set]])
 
   blocks <- individualTOMInfo$blocks
   gBlocks <- individualTOMInfo$gBlocks
@@ -3224,9 +3224,9 @@ projectiveKMeans <- function(
     for (b in 1:nBlocks)
     {
       if (intNetworkType == 1) {
-        dst <- 1 - abs(cor(centers[, changed], datExpr[, blocks[[b]] ]))
+        dst <- 1 - abs(cor(centers[, changed], datExpr[, blocks[[b]]]))
       } else {
-        dst <- 1 - cor(centers[, changed], datExpr[, blocks[[b]] ])
+        dst <- 1 - cor(centers[, changed], datExpr[, blocks[[b]]])
       }
       dstAll[changed, blocks[[b]]] <- dst
       if (verbose > 5) pind <- updateProgInd(b / nBlocks, pind)

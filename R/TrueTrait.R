@@ -66,7 +66,7 @@ I recommend you impute missing values in datX before running this function. ")
       SsquaredBE <- var(y.true2 - y, na.rm = TRUE) - (1 - r.characteristic^2) / r.characteristic^2 * var(y, na.rm = TRUE) / no.variables
       # this corresponds to formula 34 in Klemera
       y.true3 <- (as.numeric(as.matrix(datXscaled) %*% weights0) + y / SsquaredBE) / (sum(weights0) + 1 / SsquaredBE)
-      y.true3[is.na(y.true3) ] <- y[is.na(y.true3)]
+      y.true3[is.na(y.true3)] <- y[is.na(y.true3)]
     } # end of if (no.observations>1 )
     SD.ytrue2 <- sqrt(1 - r.characteristic^2) / r.characteristic * sqrt(var(y, na.rm = TRUE) / no.variables)
     # now formula 42
