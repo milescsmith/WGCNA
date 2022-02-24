@@ -23,7 +23,8 @@ Imports:
   Rcpp (>= 0.11.0), 
   robust,
   glue
-Suggests: org.Hs.eg.db, 
+Suggests:
+  org.Hs.eg.db, 
   org.Mm.eg.db, 
   infotheo, 
   entropy, 
@@ -38,5 +39,5 @@ NeedsCompilation: yes
 Packaged: 2018-10-22 22:52:45 UTC; plangfelder
 Repository: CRAN
 Date/Publication: 2018-10-24 09:30:03 UTC
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.2
 Encoding: UTF-8

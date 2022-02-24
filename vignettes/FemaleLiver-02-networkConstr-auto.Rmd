@@ -10,56 +10,61 @@ output:
     toc_depth: '2'
   pdf_document:
     fig_caption: yes
+  rmarkdown::github_document:
+    html_preview: false
+    toc: true
+    toc_depth: 3
 ---
 
 # Preliminaries: setting up the R session
 Here we assume that a new R session has just been started. We load the WGCNA package, set up basic parameters and load data saved in the first part of the tutorial.
 **Important note**: The code below uses parallel computation where multiple cores are available. This works well when R is run from a terminal or from the Graphical User Interface (GUI) shipped with R itself, but at present it does not work with RStudio and possibly other third-party R environments. If you use RStudio or other third-party R environments, skip the `enableWGCNAThreads()` call below.
 ```{r}
-# Display the current working directory
-getwd()
-# If necessary, change the path below to the directory where the data files are stored.
-# "." means current directory. On Windows use a forward slash / instead of the usual \.
-workingDir <- "."
-setwd(workingDir)
 # Load the WGCNA package
 library(WGCNA)
+library(here)
+
 # The following setting is important, do not omit.
 options(stringsAsFactors = FALSE)
+
 # Allow multi-threading within WGCNA. This helps speed up certain calculations.
 # At present this call is necessary for the code to work.
 # Any error here may be ignored but you may want to update WGCNA if you see one.
 # Caution: skip this line if you run RStudio or other third-party R environments.
 # See note above.
 enableWGCNAThreads()
+
 # Load the data saved in the first part
-lnames <- load(file = "../data/FemaleLiver-01-dataInput.RData")
+lnames <- load(file = here("data/FemaleLiver-01-dataInput.RData"))
+
 # The variable lnames contains the names of loaded variables.
 lnames
 ```
 We have loaded the variables datExpr and datTraits containing the expression and trait data, respectively.
 
 # Automatic construction of the gene network and identification of modules
-This step is the bedrock of all network analyses using the WGCNA methodology. We present three different ways of
-constructing a network and identifying modules:
-  1. Using a convenient 1-step network construction and module detection function, suitable for users wishing to arrive
-at the result with minimum effort;
+This step is the bedrock of all network analyses using the WGCNA methodology. We present three different ways of constructing a network and identifying modules:
+  1. Using a convenient 1-step network construction and module detection function, suitable for users wishing to arrive at the result with minimum effort;
   2. Step-by-step network construction and module detection for users who would like to experiment with customized/alternate methods;
-  3. An automatic block-wise network construction and module detection method for users who wish to analyze data
-sets too large to be analyzed all in one.
+  3. An automatic block-wise network construction and module detection method for users who wish to analyze data sets too large to be analyzed all in one.
+
 In this tutorial section, we illustrate the 1-step, automatic network construction and module detection.
 
 ## Automatic network construction and module detection
+
 ### Choosing the soft-thresholding power: analysis of network topology
 Constructing a weighted gene network entails the choice of the soft thresholding power *β* to which co-expression similarity is raised to calculate adjacency [1]. The authors of [1] have proposed to choose the soft thresholding power based on the criterion of approximate scale-free topology. We refer the reader to that work for more details; here we illustrate the use of the function `pickSoftThreshold` that performs the analysis of network topology and aids the user in choosing a proper soft-thresholding power. The user chooses a set of candidate powers (the function provides suitable default values), and the function returns a set of network indices that should be inspected, for example as follows:
 ```{r fig.cap="\\label{fig:figs}Analysis of network topology for various soft-thresholding powers. The left panel shows the scale-free fit index (*y*-axis) as a function of the soft-thresholding power (*x*-axis). The right panel displays the mean connectivity (degree, *y*-axis) as a function of the soft-thresholding power (*x*-axis)."}
 # Choose a set of soft-thresholding powers
 powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
+
 # Call the network topology analysis function
 sft <- pickSoftThreshold(datExpr, powerVector = powers, verbose = 5)
+
 # Plot the results:
 par(mfrow = c(1, 2))
 cex1 <- 0.9
+
 # Scale-free topology fit index as a function of the soft-thresholding power
 plot(sft$fitIndices[, 1], -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
   xlab = "Soft Threshold (power)", ylab = "Scale Free Topology Model Fit,signed R^2", type = "n",
@@ -68,8 +73,10 @@ plot(sft$fitIndices[, 1], -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
 text(sft$fitIndices[, 1], -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
   labels = powers, cex = cex1, col = "red"
 )
+
 # this line corresponds to using an R^2 cut-off of h
 abline(h = 0.90, col = "red")
+
 # Mean connectivity as a function of the soft-thresholding power
 plot(sft$fitIndices[, 1], sft$fitIndices[, 5],
   xlab = "Soft Threshold (power)", ylab = "Mean Connectivity", type = "n",
@@ -77,8 +84,8 @@ plot(sft$fitIndices[, 1], sft$fitIndices[, 5],
 )
 text(sft$fitIndices[, 1], sft$fitIndices[, 5], labels = powers, cex = cex1, col = "red")
 ```
-The result is shown in Figure \ref{fig:figs}. We choose the power 6, which is the lowest power for which the scale-free topology fit
-index curve flattens out upon reaching a high value (in this case, roughly 0.90).
+
+The result is shown in Figure \ref{fig:figs}. We choose the power 6, which is the lowest power for which the scale-free topology fit index curve flattens out upon reaching a high value (in this case, roughly 0.90).
 
 ### One-step network construction and module detection
 Constructing the gene network and identifying modules is now a simple function call:
@@ -92,7 +99,7 @@ net <- blockwiseModules(datExpr,
   numericLabels = TRUE, 
   pamRespectsDendro = FALSE,
   saveTOMs = TRUE,
-  saveTOMFileBase = "../data/femaleMouseTOM",
+  saveTOMFileBase = here("data/femaleMouseTOM"),
   verbose = 3
 )
 ```
@@ -113,6 +120,7 @@ and indicates that there are 18 modules, labeled 1 through 18 in order of descen
 ```{r fig.cap="\\label{fig:figs}Clustering dendrogram of genes, with dissimilarity based on topological overlap, together with assigned module colors. "}
 # Convert labels to colors for plotting
 mergedColors <- labels2colors(net$colors)
+
 # Plot the dendrogram and the module colors underneath
 plotDendroAndColors(net$dendrograms[[1]], mergedColors[net$blockGenes[[1]]],
   "Module colors",
@@ -128,7 +136,7 @@ moduleColors <- labels2colors(net$colors)
 MEs <- net$MEs
 geneTree <- net$dendrograms[[1]]
 save(MEs, moduleLabels, moduleColors, geneTree,
-  file = "../data/FemaleLiver-02-networkConstruction-auto.RData"
+  file = "data/FemaleLiver-02-networkConstruction-auto.RData"
 )
 ```
 
