@@ -41,6 +41,8 @@ moduleColor.getMEprefix <- function() {
 #' @param scale 
 #' @param verbose 
 #' @param indent 
+#' 
+#' @importFrom forcats fct_drop
 #'
 #' @return
 #' @export
@@ -76,26 +78,20 @@ moduleEigengenes <- function(expr, colors, impute = TRUE, nPC = 1, align = "alon
   }
 
   if (is.factor(colors)) {
-    nl <- nlevels(colors)
-    nlDrop <- nlevels(colors[, drop = TRUE])
-    if (nl > nlDrop) {
-      stop(paste(
-        "Argument 'colors' contains unused levels (empty modules). ",
-        "Use colors[, drop=TRUE] to get rid of them."
-      ))
-    }
+    colors <- fct_drop(colors)
   }
 
   if (softPower < 0) stop("softPower must be non-negative")
 
   alignRecognizedValues <- c("", "along average")
   if (!is.element(align, alignRecognizedValues)) {
-    printFlush(paste(
-      "ModulePrincipalComponents: Error:",
-      "parameter align has an unrecognised value:",
-      align, "; Recognized values are ", alignRecognizedValues
-    ))
-    stop()
+    stop(
+      paste(
+        "ModulePrincipalComponents: Error:",
+        "parameter align has an unrecognised value:",
+        align, "; Recognized values are ", alignRecognizedValues
+      )
+    )
   }
 
   maxVarExplained <- 10
@@ -109,10 +105,12 @@ moduleEigengenes <- function(expr, colors, impute = TRUE, nPC = 1, align = "alon
     if (sum(as.character(modlevels) != as.character(grey)) > 0) {
       modlevels <- modlevels[as.character(modlevels) != as.character(grey)]
     } else {
-      stop(paste(
-        "Color levels are empty. Possible reason: the only color is grey",
-        "and grey module is excluded from the calculation."
-      ))
+      stop(
+        paste(
+          "Color levels are empty. Possible reason: the only color is grey",
+          "and grey module is excluded from the calculation."
+        )
+      )
     }
   }
   PrinComps <- data.frame(matrix(NA, nrow = dim(expr)[[1]], ncol = length(modlevels)))
@@ -125,8 +123,9 @@ moduleEigengenes <- function(expr, colors, impute = TRUE, nPC = 1, align = "alon
   validColors <- colors
   names(PrinComps) <- paste(moduleColor.getMEprefix(), modlevels, sep = "")
   names(averExpr) <- paste("AE", modlevels, sep = "")
-  for (i in c(1:length(modlevels)))
-  {
+  if (!is.null(rownames(expr))) rownames(PrinComps) = rownames(averExpr) = make.unique(rownames(expr))
+  
+  for (i in c(1:length(modlevels))){
     if (verbose > 1) {
       printFlush(paste(spaces, "moduleEigengenes : Working on ME for module", modlevels[i]))
     }
@@ -563,7 +562,7 @@ consensusMEDissimilarity <- function(MEs, useAbs = FALSE, useSets = NULL, method
 
   ConsDiss <- as.data.frame(ConsDiss)
   names(ConsDiss) <- names(MEs[[useSets[1]]]$data)
-  rownames(ConsDiss) <- names(MEs[[useSets[1]]]$data)
+  rownames(ConsDiss) = make.unique(names(MEs[[useSets[1]]]$data))
 
   ConsDiss
 }
@@ -2915,7 +2914,7 @@ TOMplot <- function(dissim, dendro, Colors = NULL, ColorsLeft = Colors, terrainC
 plotNetworkHeatmap <- function(datExpr, plotGenes, weights = NULL, useTOM = TRUE, power = 6,
                                networkType = "unsigned", main = "Heatmap of the network") {
   match1 <- match(plotGenes, colnames(datExpr))
-  match1 <- match1[!is.na(match1)]8
+  match1 <- match1[!is.na(match1)]
   nGenes <- length(match1)
   if (sum(!is.na(match1)) != length(plotGenes)) {
     printFlush(paste(
